@@ -18,14 +18,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { mockCurrentUser } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 
-const nav = [
+const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/employees", label: "Employees", icon: Users },
   { to: "/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/profile", label: "Profile", icon: UserIcon },
   { to: "/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 interface SidebarProps {
   collapsed: boolean;
