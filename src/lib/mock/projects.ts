@@ -1,0 +1,66 @@
+import type { Project } from "../types";
+
+export const mockProjects: Project[] = [
+  {
+    id: "p1",
+    name: "Atlas Design System 2.0",
+    description:
+      "Ship a unified component library and design tokens across web and mobile products.",
+    status: "in_progress",
+    progress: 68,
+    startDate: "2026-05-02",
+    dueDate: "2026-08-14",
+    teamIds: ["u1", "u2", "u7"],
+  },
+  {
+    id: "p2",
+    name: "Billing Platform Migration",
+    description:
+      "Migrate legacy billing to the new usage-based engine with zero downtime for enterprise tier.",
+    status: "in_progress",
+    progress: 42,
+    startDate: "2026-04-10",
+    dueDate: "2026-09-30",
+    teamIds: ["u2", "u3", "u6"],
+  },
+  {
+    id: "p3",
+    name: "Mobile App v3",
+    description: "Rebuild native iOS and Android apps with the new design system and offline sync.",
+    status: "planning",
+    progress: 12,
+    startDate: "2026-07-01",
+    dueDate: "2026-12-20",
+    teamIds: ["u1", "u4", "u2"],
+  },
+  {
+    id: "p4",
+    name: "Q3 Growth Campaign",
+    description: "Cross-channel launch for the summer campaign, including partner co-marketing.",
+    status: "in_progress",
+    progress: 55,
+    startDate: "2026-06-01",
+    dueDate: "2026-08-01",
+    teamIds: ["u5", "u4", "u8"],
+  },
+  {
+    id: "p5",
+    name: "Internal Analytics Dashboard",
+    description: "Company-wide metrics dashboard with real-time revenue and product KPIs.",
+    status: "on_hold",
+    progress: 30,
+    startDate: "2026-03-15",
+    dueDate: "2026-07-30",
+    teamIds: ["u3", "u6"],
+  },
+  {
+    id: "p6",
+    name: "Customer Onboarding Revamp",
+    description: "New guided onboarding flow with in-app checklists and product tours.",
+    status: "completed",
+    progress: 100,
+    startDate: "2026-01-08",
+    dueDate: "2026-05-15",
+    teamIds: ["u1", "u4", "u7", "u5"],
+  },
+];
