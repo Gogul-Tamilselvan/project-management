@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { Mail, Phone, Building2, Briefcase, Pencil, KeyRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,7 @@ import { mockTasks } from "@/lib/mock/tasks";
 import { mockProjects } from "@/lib/mock/projects";
 import { initials } from "@/lib/format";
 
-export const Route = createFileRoute("/_app/profile")({
-  component: ProfilePage,
-});
-
-function ProfilePage() {
+export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const u = mockCurrentUser;

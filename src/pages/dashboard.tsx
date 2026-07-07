@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "react-router-dom";
 import { FolderKanban, Users, Clock, CheckCircle2, ArrowRight, Plus, CalendarDays } from "lucide-react";
 import { SummaryCard } from "@/components/ui-kit/summary-card";
 import { ProgressBar } from "@/components/ui-kit/progress-bar";
@@ -7,7 +7,6 @@ import {
   PriorityPill,
   TaskStatusBadge,
 } from "@/components/ui-kit/status-badges";
-import { AvatarStack } from "@/components/ui-kit/avatar-stack";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,10 +24,6 @@ import { mockActivities } from "@/lib/mock/activities";
 import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials, relativeTime } from "@/lib/format";
 
-export const Route = createFileRoute("/_app/")({
-  component: DashboardPage,
-});
-
 const activityIcon = {
   project_created: FolderKanban,
   task_assigned: ArrowRight,
@@ -45,7 +40,7 @@ const activityTint = {
   project_updated: "bg-warning/20 text-warning-foreground",
 } as const;
 
-function DashboardPage() {
+export function DashboardPage() {
   const totalProjects = mockProjects.length;
   const totalEmployees = mockEmployees.length;
   const pendingTasks = mockTasks.filter((t) => t.status !== "completed").length;

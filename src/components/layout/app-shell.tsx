@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Navbar } from "./navbar";
 import { Sidebar, useSidebarState } from "./sidebar";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell() {
   const { collapsed, toggle } = useSidebarState();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -35,7 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="flex-1 px-4 py-6 sm:px-6 lg:px-8"
         >
-          {children}
+          <Outlet />
         </motion.main>
       </div>
     </div>

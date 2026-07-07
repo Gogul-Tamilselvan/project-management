@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +16,6 @@ import { Modal } from "@/components/ui-kit/modal";
 import { EmptyState } from "@/components/ui-kit/empty-state";
 import { mockProjects } from "@/lib/mock/projects";
 import type { ProjectStatus } from "@/lib/types";
-import { FolderKanban } from "lucide-react";
-
-export const Route = createFileRoute("/_app/projects")({
-  component: ProjectsPage,
-});
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
@@ -31,7 +25,7 @@ const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "Completed", value: "completed" },
 ];
 
-function ProjectsPage() {
+export function ProjectsPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ProjectStatus | "all">("all");

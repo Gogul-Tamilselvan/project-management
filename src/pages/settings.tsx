@@ -1,15 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { Bell, Palette, Shield, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-export const Route = createFileRoute("/_app/settings")({
-  component: SettingsPage,
-});
-
-function SettingsPage() {
+export function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>

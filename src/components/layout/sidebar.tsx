@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -11,7 +11,6 @@ import {
   LogOut,
   ChevronsLeft,
   ChevronsRight,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,7 +35,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarProps) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { pathname } = useLocation();
 
   return (
     <aside
@@ -48,9 +47,6 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
     >
       {/* Brand */}
       <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-4">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-elegant">
-          <Sparkles className="h-4.5 w-4.5" size={18} strokeWidth={2.25} />
-        </div>
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.div
@@ -61,8 +57,7 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
               transition={{ duration: 0.15 }}
               className="min-w-0"
             >
-              <p className="truncate text-sm font-bold tracking-tight">Plane</p>
-              <p className="truncate text-[11px] text-muted-foreground">Workspace</p>
+              <p className="truncate text-sm font-bold tracking-tight">Digital Teenz</p>
             </motion.div>
           )}
         </AnimatePresence>

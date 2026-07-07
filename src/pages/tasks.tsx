@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { Plus, MoreHorizontal, CalendarDays, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -36,11 +35,7 @@ import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials } from "@/lib/format";
 import type { Priority, TaskStatus } from "@/lib/types";
 
-export const Route = createFileRoute("/_app/tasks")({
-  component: TasksPage,
-});
-
-function TasksPage() {
+export function TasksPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<Priority | "all">("all");

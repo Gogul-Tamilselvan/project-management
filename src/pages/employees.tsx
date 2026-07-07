@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
 import { Plus, MoreHorizontal, Upload, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -31,11 +30,7 @@ import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
 import { mockEmployees } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 
-export const Route = createFileRoute("/_app/employees")({
-  component: EmployeesPage,
-});
-
-function EmployeesPage() {
+export function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
