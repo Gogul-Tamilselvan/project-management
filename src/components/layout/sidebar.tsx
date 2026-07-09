@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronsLeft,
   ChevronsRight,
+  UserKeyIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +25,7 @@ const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exac
   { to: "/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/profile", label: "Profile", icon: UserIcon },
   { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/signup", label: "Login", icon: UserKeyIcon },
 ];
 
 interface SidebarProps {

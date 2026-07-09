@@ -6,6 +6,8 @@ import { EmployeesPage } from "@/pages/employees";
 import { TasksPage } from "@/pages/tasks";
 import { ProfilePage } from "@/pages/profile";
 import { SettingsPage } from "@/pages/settings";
+import SignupPage from "./pages/signup";
+import SigninPage from "./pages/signin";
 
 function NotFoundPage() {
   return (
@@ -39,6 +41,8 @@ export function App() {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="signup" element={<SignupPage />} />
+        <Route path="signin" element={<SigninPage />} />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
