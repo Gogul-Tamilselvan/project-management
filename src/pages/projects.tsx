@@ -130,10 +130,7 @@ function CreateProjectModal({
         </>
       }
     >
-      <form
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-        onSubmit={(e) => e.preventDefault()}
-      >
+      <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
         <div className="sm:col-span-2">
           <Label htmlFor="p-name">Project name</Label>
           <Input id="p-name" placeholder="e.g. Mobile App v3" className="mt-1.5" />

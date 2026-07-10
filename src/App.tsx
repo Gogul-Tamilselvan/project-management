@@ -6,8 +6,8 @@ import { EmployeesPage } from "@/pages/employees";
 import { TasksPage } from "@/pages/tasks";
 import { ProfilePage } from "@/pages/profile";
 import { SettingsPage } from "@/pages/settings";
-import SignupPage from "./pages/signup";
-import SigninPage from "./pages/signin";
+import { SignupPage } from "./pages/signup";
+import { SigninPage } from "./pages/signin";
 
 function NotFoundPage() {
   return (

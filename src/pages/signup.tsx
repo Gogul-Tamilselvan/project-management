@@ -1,26 +1,42 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import React, { useState } from "react";
+import { connectSupabase } from "@/services/config";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
+interface FormDataType {
+  name: string;
+  email: string;
+  password: string;
+  message: string;
+  loading: boolean;
+}
 
-export default function Signup() {
-  const [name, setname] = useState("");
-  const [email, setemail] = useState("");
-  const [password, setpassword] = useState("");
-  const [message, setmessage] = useState("");
-  const [loading, setloading] = useState(false);
+export function SignupPage() {
+  const [formData, setFormData] = useState<FormDataType>({
+    name: "",
+    email: "",
+    password: "",
+    message: "",
+    loading: false,
+  });
 
-  const handlesubmit = async (e) => {
+  const handlesubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(formData);
 
-    setloading(true);
-    setmessage("");
+    setFormData((prev) => ({
+      ...prev,
+      loading: true,
+      message: "",
+    }));
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    const { data, error } = await connectSupabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
       options: {
         data: {
-          name: name,
+          name: formData.name,
         },
       },
     });
@@ -30,92 +46,107 @@ export default function Signup() {
         error.message.toLowerCase().includes("already") ||
         error.message.toLowerCase().includes("exists")
       ) {
-        setmessage("This account is already registered.");
+        setFormData((prev) => ({
+          ...prev,
+          message: "This account is already registered.",
+        }));
       } else {
-        setmessage(error.message);
+        setFormData((prev) => ({
+          ...prev,
+          message: error.message,
+        }));
       }
+      setFormData((prev) => ({
+        ...prev,
+        loading: false,
+      }));
 
-      setloading(false);
       return;
     }
 
     // when the user already exists.
     if (data.user?.identities?.length === 0) {
-      setmessage("This account is already registered.");
-      setloading(false);
+      setFormData((prev) => ({
+        ...prev,
+        message: "This account is already registered.",
+        loading: true,
+      }));
       return;
     }
 
-    setmessage("Registration successful. Please SignIn.");
+    setFormData((prev) => ({
+      ...prev,
+      message: "Registration successful. Please SignIn.",
+    }));
 
-    setname("");
-    setemail("");
-    setpassword("");
-    setloading(false);
+    setFormData((prev) => ({
+      ...prev,
+      name: "",
+      email: "",
+      password: "",
+      loading: false,
+    }));
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 -translate-y-10">
+    <div className="h-screen bg-white flex items-center justify-center px-4 -translate-y-10">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
         {/* Heading */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Create Account
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Register your details.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Register your details.</p>
         </div>
 
         {/* Message */}
-        {message && (
+        {formData.message && (
           <div className="mb-4 p-3 rounded-lg bg-gray-100 text-center text-sm text-gray-700">
-            {message}
+            {formData.message}
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handlesubmit} className="space-y-5">
-          <input
-            value={name}
-            onChange={(e) => setname(e.target.value)}
-            type="text"
-            placeholder="Enter Your Name"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
+        <form onSubmit={handlesubmit} className="space-y-4">
+          <div>
+            <label htmlFor="su-name">Name</label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+              type="text"
+              placeholder="Enter Your Name"
+              required
+              id="su-name"
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <label htmlFor="su-email">Email</label>
+            <Input
+              id="su-email"
+              value={formData.email}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+              type="email"
+              placeholder="Enter Your Email"
+              required
+              className="mt-1.5"
+            />
+          </div>
 
-          <input
-            value={email}
-            onChange={(e) => setemail(e.target.value)}
-            type="email"
-            placeholder="Enter Your Email"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-
-          <input
-            value={password}
-            onChange={(e) => setpassword(e.target.value)}
-            type="password"
-            placeholder="Enter Your Password"
-            required
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg
-            font-semibold hover:bg-blue-700 active:scale-95
-            transition duration-300 shadow-md"
-          >
-            {loading ? "Creating Account..." : "Sign Up"}
-          </button>
+          <div>
+            <label htmlFor="su-password">Password</label>
+            <Input
+              id="su-password"
+              value={formData.password}
+              onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+              type="password"
+              placeholder="Enter Your Password"
+              required
+              className="mt-1.5"
+            />
+          </div>
+          <Button type="submit" disabled={formData.loading} className="w-full">
+            {formData.loading ? "Creating Account..." : "Sign Up"}
+          </Button>
         </form>
 
         {/* Login Link */}
@@ -125,7 +156,7 @@ export default function Signup() {
             to="/signin"
             className="text-blue-600 font-semibold hover:text-blue-700 hover:underline transition"
           >
-            Sign In
+            Sign Up
           </Link>
         </div>
       </div>

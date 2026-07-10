@@ -23,7 +23,9 @@ export function ProfilePage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Profile</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Your personal information and account details.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your personal information and account details.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -44,7 +46,12 @@ export function ProfilePage() {
                 <Button size="sm" onClick={() => setEditOpen(true)} className="gap-1.5">
                   <Pencil className="h-3.5 w-3.5" /> Edit profile
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => setPwOpen(true)} className="gap-1.5">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setPwOpen(true)}
+                  className="gap-1.5"
+                >
                   <KeyRound className="h-3.5 w-3.5" /> Change password
                 </Button>
               </div>
@@ -63,7 +70,12 @@ export function ProfilePage() {
         <div className="space-y-4">
           <StatBlock label="Active projects" value={myProjects} />
           <StatBlock label="Assigned tasks" value={myTasks} />
-          <StatBlock label="Tasks completed" value={mockTasks.filter((t) => t.assigneeId === u.id && t.status === "completed").length} />
+          <StatBlock
+            label="Tasks completed"
+            value={
+              mockTasks.filter((t) => t.assigneeId === u.id && t.status === "completed").length
+            }
+          />
         </div>
       </div>
 
@@ -73,12 +85,17 @@ export function ProfilePage() {
         title="Edit profile"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => setEditOpen(false)}>Save changes</Button>
           </>
         }
       >
-        <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
+        <form
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+          onSubmit={(e) => e.preventDefault()}
+        >
           <div className="sm:col-span-2">
             <Label htmlFor="pr-name">Full name</Label>
             <Input id="pr-name" defaultValue={u.name} className="mt-1.5" />
@@ -108,7 +125,9 @@ export function ProfilePage() {
         title="Change password"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setPwOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setPwOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => setPwOpen(false)}>Update password</Button>
           </>
         }
@@ -157,9 +176,7 @@ function InfoRow({
 function StatBlock({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-soft">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-2 text-3xl font-bold tracking-tight text-foreground">{value}</p>
     </div>
   );

@@ -121,9 +121,7 @@ export function TasksPage() {
                     <TableCell className="pl-6 py-3.5">
                       <div className="font-medium text-foreground">{t.title}</div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {project?.name}
-                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{project?.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-7 w-7">
@@ -157,9 +155,7 @@ export function TasksPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>Open</DropdownMenuItem>
                           <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            Delete
-                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -198,10 +194,7 @@ function CreateTaskModal({
         </>
       }
     >
-      <form
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-        onSubmit={(e) => e.preventDefault()}
-      >
+      <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
         <div className="sm:col-span-2">
           <Label htmlFor="t-name">Task title</Label>
           <Input id="t-name" placeholder="What needs to get done?" className="mt-1.5" />
