@@ -23,7 +23,6 @@ export function SignupPage() {
 
   const handlesubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(formData);
 
     setFormData((prev) => ({
       ...prev,
@@ -89,18 +88,18 @@ export function SignupPage() {
   };
 
   return (
-    <div className="h-screen bg-white flex items-center justify-center px-4 -translate-y-10">
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+    <div className=" h-[calc(100dvh-115px)] flex items-center justify-center px-4 -translate-y-10">
+      <div className="w-full max-w-md p-8 rounded-xl shadow-lg border border-border bg-card">
         {/* Heading */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
+          <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
 
-          <p className="mt-1 text-sm text-gray-500">Register your details.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Register your details.</p>
         </div>
 
         {/* Message */}
         {formData.message && (
-          <div className="mb-4 p-3 rounded-lg bg-gray-100 text-center text-sm text-gray-700">
+          <div className="mb-4 p-3 rounded-lg border text-foreground  text-center text-sm bg-card">
             {formData.message}
           </div>
         )}
