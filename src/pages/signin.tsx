@@ -62,7 +62,7 @@ export function SigninPage() {
     }));
 
     setTimeout(() => {
-      navigate("/");
+      navigate("/dashboard");
     }, 500);
   };
 
@@ -111,7 +111,7 @@ export function SigninPage() {
             />
           </div>
           <Button type="submit" disabled={formData.loading} className="w-full">
-            {formData.loading ? "Creating Account..." : "Sign Up"}
+            {formData.loading ? "Creating Account..." : "Sign in"}
           </Button>
         </form>
 

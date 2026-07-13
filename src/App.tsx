@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/app-shell";
 import { DashboardPage } from "@/pages/dashboard";
 import { ProjectsPage } from "@/pages/projects";
@@ -34,16 +34,19 @@ function NotFoundPage() {
 export function App() {
   return (
     <Routes>
+         <Route path="/" element={<Navigate to="/signin" replace />} />
+
+      <Route path="/signin" element={<SigninPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+
       <Route element={<AppShell />}>
-        <Route index element={<DashboardPage />} />
+     <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="employees" element={<EmployeesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="signup" element={<SignupPage />} />
-        <Route path="signin" element={<SigninPage />} />
-      </Route>
+        </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
