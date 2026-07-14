@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, MoreHorizontal, Upload, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -29,14 +29,64 @@ import { Modal } from "@/components/ui-kit/modal";
 import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
 import { mockEmployees } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
+import { Employee, EmployeeStatus } from "@/lib/types";
+import { connectSupabase } from "@/services/config";
+
+interface EmployeDB {
+  id: string;
+  emp_name: string;
+  emp_email: string;
+  phone: string;
+  avatarUrl?: string;
+  department: string;
+  role: string;
+  status: EmployeeStatus;
+}
 
 export function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [data, setData] = useState<EmployeDB[]>();
 
-  const visible = mockEmployees.filter((e) =>
-    (e.name + e.email + e.department).toLowerCase().includes(query.toLowerCase()),
+  const visible = data?.filter((e) =>
+    (e.emp_name + e.emp_email + e.department).toLowerCase().includes(query.toLowerCase()),
   );
+
+  const getEmployes = async () => {
+    const { data, error } = await connectSupabase.from("employee").select();
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("datas");
+      console.log(data);
+      setData(data);
+    }
+  };
+
+  useEffect(() => {
+    getEmployes();
+  }, []);
+
+  useEffect(() => {
+    const channel = connectSupabase
+      .channel("employee-channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "employee",
+        },
+        () => {
+          getEmployes();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      connectSupabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -75,17 +125,17 @@ export function EmployeesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visible.map((e) => (
+              {visible?.map((e) => (
                 <TableRow key={e.id} className="border-border">
                   <TableCell className="pl-6 py-3.5">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={e.avatarUrl} alt={e.name} />
-                        <AvatarFallback>{initials(e.name)}</AvatarFallback>
+                        <AvatarImage src={e.avatarUrl} alt={e.emp_name} />
+                        <AvatarFallback>{initials(e.emp_name)}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <div className="font-medium text-foreground">{e.name}</div>
-                        <div className="text-xs text-muted-foreground">{e.email}</div>
+                        <div className="font-medium text-foreground">{e.emp_name}</div>
+                        <div className="text-xs text-muted-foreground">{e.emp_email}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -104,9 +154,7 @@ export function EmployeesPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>View profile</DropdownMenuItem>
                         <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          Remove
-                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Remove</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -129,6 +177,64 @@ function AddEmployeeModal({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const [formData, setFormData] = useState<Employee>({
+    id: `emp_`,
+    name: "",
+    email: "",
+    phone: "",
+    avatarUrl: "",
+    department: "",
+    role: "",
+    status: "active",
+  });
+
+  const [image, setimage] = useState<File | null>();
+
+  const addEmploye = async () => {
+    try {
+      if (!image) {
+        console.log("Please select an image.");
+        return;
+      }
+
+      const fileName = `${Date.now()}-${image.name}`;
+      const filePath = `Emp_image/${fileName}`;
+
+      const { error: uploadError } = await connectSupabase.storage
+        .from("Employe")
+        .upload(filePath, image);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = connectSupabase.storage.from("Employe").getPublicUrl(filePath);
+
+      const imageUrl = urlData.publicUrl;
+
+      const { data, error } = await connectSupabase
+        .from("employee")
+        .insert([
+          {
+            emp_name: formData.name,
+            emp_email: formData.email,
+            emp_phone: formData.phone,
+            avatarUrl: imageUrl,
+            department: formData.department,
+            role: formData.role,
+            status: formData.status,
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.log(error);
+      } else {
+        console.log(data);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -140,40 +246,90 @@ function AddEmployeeModal({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Add employee</Button>
+          <Button type="submit" form="employe-form" onClick={addEmploye}>
+            Add employee
+          </Button>
         </>
       }
     >
       <form
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         onSubmit={(e) => e.preventDefault()}
+        id="employe-form"
       >
         <div className="sm:col-span-2 flex items-center gap-4">
           <div className="grid h-16 w-16 place-items-center rounded-full border border-dashed border-border bg-muted text-muted-foreground">
             <Upload className="h-5 w-5" />
           </div>
           <div>
-            <Button type="button" variant="secondary" size="sm">
-              Upload photo
-            </Button>
+            <Input
+              id="e-pic"
+              type="file"
+              accept="image/*"
+              required
+              onChange={(e) => setimage(e.target.files?.[0] ?? null)}
+            />
             <p className="mt-1 text-xs text-muted-foreground">PNG or JPG up to 2MB.</p>
           </div>
         </div>
         <div>
           <Label htmlFor="e-name">Full name</Label>
-          <Input id="e-name" placeholder="e.g. Jane Cooper" className="mt-1.5" />
+          <Input
+            id="e-name"
+            placeholder="e.g. Jane Cooper"
+            className="mt-1.5"
+            required
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                name: e.target.value,
+              }))
+            }
+          />
         </div>
         <div>
           <Label htmlFor="e-email">Email</Label>
-          <Input id="e-email" type="email" placeholder="jane@company.com" className="mt-1.5" />
+          <Input
+            id="e-email"
+            type="email"
+            placeholder="jane@company.com"
+            className="mt-1.5"
+            required
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                email: e.target.value,
+              }))
+            }
+          />
         </div>
         <div>
           <Label htmlFor="e-phone">Phone</Label>
-          <Input id="e-phone" placeholder="+1 555 000 0000" className="mt-1.5" />
+          <Input
+            id="e-phone"
+            placeholder="+1 555 000 0000"
+            className="mt-1.5"
+            required
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                phone: e.target.value,
+              }))
+            }
+          />
         </div>
         <div>
           <Label>Department</Label>
-          <Select>
+          <Select
+            value={formData.department}
+            required
+            onValueChange={(value) =>
+              setFormData((prev) => ({
+                ...prev,
+                department: value,
+              }))
+            }
+          >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select department" />
             </SelectTrigger>
@@ -188,7 +344,18 @@ function AddEmployeeModal({
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="e-role">Designation</Label>
-          <Input id="e-role" placeholder="e.g. Senior Product Designer" className="mt-1.5" />
+          <Input
+            id="e-role"
+            placeholder="e.g. Senior Product Designer"
+            className="mt-1.5"
+            required
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                role: e.target.value,
+              }))
+            }
+          />
         </div>
       </form>
     </Modal>
