@@ -10,14 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { mockCurrentUser } from "@/lib/mock/employees";
 import { initials, relativeTime } from "@/lib/format";
 import { mockActivities } from "@/lib/mock/activities";
+import { connectSupabase } from "@/services/config";
+import { useNavigate } from "react-router-dom";
 
 interface NavbarProps {
   onOpenMobileNav: () => void;
@@ -41,6 +39,19 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
   };
 
   const firstName = mockCurrentUser.name.split(" ")[0];
+
+  const navigate = useNavigate();
+
+  const logout = async () => {
+    const { error } = await connectSupabase.auth.signOut();
+    if (error) {
+      console.log(error);
+    }
+
+    setTimeout(() => {
+      navigate("/");
+    }, 500);
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
@@ -72,12 +83,7 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
 
       <Popover>
         <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            aria-label="Notifications"
-          >
+          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
             <Bell className="h-[18px] w-[18px]" />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
           </Button>
@@ -85,7 +91,9 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
         <PopoverContent align="end" className="w-80 p-0">
           <div className="border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">Notifications</p>
-            <p className="text-xs text-muted-foreground">You have {mockActivities.length} new updates</p>
+            <p className="text-xs text-muted-foreground">
+              You have {mockActivities.length} new updates
+            </p>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {mockActivities.slice(0, 5).map((a) => (
@@ -96,7 +104,9 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
                 <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                 <div className="min-w-0 text-sm">
                   <p className="line-clamp-2 text-foreground">{a.message}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{relativeTime(a.timestamp)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {relativeTime(a.timestamp)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -128,7 +138,9 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
           <DropdownMenuItem>Profile</DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive">Log out</DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive" onClick={logout}>
+            Log out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

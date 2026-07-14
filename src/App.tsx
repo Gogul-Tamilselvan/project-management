@@ -8,6 +8,7 @@ import { ProfilePage } from "@/pages/profile";
 import { SettingsPage } from "@/pages/settings";
 import { SignupPage } from "./pages/signup";
 import { SigninPage } from "./pages/signin";
+import { useEffect, useState } from "react";
 
 function NotFoundPage() {
   return (
@@ -32,21 +33,32 @@ function NotFoundPage() {
 }
 
 export function App() {
+  const [logged, setlogged] = useState<boolean>(false);
+
+  useEffect(() => {
+    const userLogged = localStorage.getItem(`userLogged`);
+    if (userLogged) {
+      setlogged(true);
+    }
+  }, []);
+
   return (
     <Routes>
-         <Route path="/" element={<Navigate to="/signin" replace />} />
+      <Route path="/" element={<Navigate to="/signin" replace />} />
 
       <Route path="/signin" element={<SigninPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
-      <Route element={<AppShell />}>
-     <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="employees" element={<EmployeesPage />} />
-        <Route path="tasks" element={<TasksPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="settings" element={<SettingsPage />} />
+      {logged && (
+        <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
+      )}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

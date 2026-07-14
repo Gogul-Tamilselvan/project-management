@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { mockCurrentUser } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
+import { connectSupabase } from "@/services/config";
 
 const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -25,7 +26,6 @@ const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exac
   { to: "/tasks", label: "Tasks", icon: CheckSquare },
   { to: "/profile", label: "Profile", icon: UserIcon },
   { to: "/settings", label: "Settings", icon: Settings },
-  
 ];
 
 interface SidebarProps {
@@ -38,6 +38,18 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarProps) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  const logout = async () => {
+    const { error } = await connectSupabase.auth.signOut();
+    if (error) {
+      console.log(error);
+    }
+
+    setTimeout(() => {
+      navigate("/");
+    }, 500);
+  };
 
   return (
     <aside
@@ -146,7 +158,7 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
             <button
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-destructive"
               aria-label="Log out"
-              onClick={() => console.log("logout")}
+              onClick={logout}
             >
               <LogOut className="h-4 w-4" />
             </button>
