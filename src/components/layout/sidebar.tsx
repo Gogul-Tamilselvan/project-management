@@ -20,7 +20,7 @@ import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
 
 const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/projects", label: "Projects", icon: FolderKanban },
   { to: "/employees", label: "Employees", icon: Users },
   { to: "/tasks", label: "Tasks", icon: CheckSquare },
