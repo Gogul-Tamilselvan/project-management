@@ -31,9 +31,10 @@ import { mockEmployees } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
+import { useNavigate } from "react-router-dom";
 
 interface EmployeDB {
-  id: string;
+  id: number;
   emp_name: string;
   emp_email: string;
   phone: string;
@@ -45,13 +46,27 @@ interface EmployeDB {
 
 export function EmployeesPage() {
   const [open, setOpen] = useState(false);
+  const [editopen, seteditopen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeDB | null>(null);
   const [query, setQuery] = useState("");
   const [data, setData] = useState<EmployeDB[]>();
+  const navigate = useNavigate();
 
   const visible = data?.filter((e) =>
     (e.emp_name + e.emp_email + e.department).toLowerCase().includes(query.toLowerCase()),
   );
 
+
+  const deleteemploye = async (id: number) => {
+
+    const { error } = await connectSupabase.from("employee").delete().eq("id", id);
+    if (error) {
+      console.log("delete error", error);
+      return;
+    }
+    console.log("delete succesfully")
+
+  }
   const getEmployes = async () => {
     const { data, error } = await connectSupabase.from("employee").select();
     if (error) {
@@ -66,6 +81,7 @@ export function EmployeesPage() {
   useEffect(() => {
     getEmployes();
   }, []);
+
 
   useEffect(() => {
     const channel = connectSupabase
@@ -134,7 +150,7 @@ export function EmployeesPage() {
                         <AvatarFallback>{initials(e.emp_name)}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <div className="font-medium text-foreground">{e.emp_name}</div>
+                        <div className="font-medium text-foreground" >{e.emp_name}</div>
                         <div className="text-xs text-muted-foreground">{e.emp_email}</div>
                       </div>
                     </div>
@@ -152,9 +168,9 @@ export function EmployeesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View profile</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Remove</DropdownMenuItem>
+                        <DropdownMenuItem  onClick={()=>navigate("/profile")}>View Profile</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setSelectedEmployee(e); seteditopen(true) }}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => deleteemploye(e.id)}>Remove</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -166,9 +182,232 @@ export function EmployeesPage() {
       </div>
 
       <AddEmployeeModal open={open} onOpenChange={setOpen} />
+      <EditEmployeeModal editopen={editopen} seteditopen={seteditopen} employe={selectedEmployee} />
     </div>
   );
 }
+
+
+function EditEmployeeModal({
+  editopen,
+  seteditopen,
+  employe,
+}: {
+  editopen: boolean;
+  seteditopen: (v: boolean) => void;
+  employe: EmployeDB | null;
+}) {
+
+  const [updatedata, setupdatedata] = useState<Employee>({
+    id: 0,
+    name: "",
+    email: "",
+    phone: "",
+    avatarUrl: "",
+    department: "",
+    role: "",
+    status: "",
+  });
+
+
+  const [updateimage, setupdateimage] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (employe) {
+      setupdatedata({
+        id: employe.id,
+        name: employe.emp_name,
+        email: employe.emp_email,
+        phone: employe.phone,
+        avatarUrl: employe.avatarUrl || "",
+        department: employe.department,
+        role: employe.role,
+        status: employe.status,
+      });
+    }
+  }, [employe]);
+
+  const updatedetails = async () => {
+    try {
+      if (!updatedata.id) {
+        console.log("Employee id not found");
+        return;
+      }
+
+      let imgurl = updatedata.avatarUrl;
+
+      if (updateimage) {
+        const filename = `${Date.now()}-${updateimage.name}`;
+
+        const filepath = `avatarUrl/${filename}`;
+
+        const { error: imageerror } =
+          await connectSupabase.storage
+            .from("Employe")
+            .upload(filepath, updateimage);
+
+        if (imageerror) {
+          console.log(imageerror);
+          return;
+        }
+
+        const { data: urlData } =
+          connectSupabase.storage
+            .from("Employe")
+            .getPublicUrl(filepath);
+
+        imgurl = urlData.publicUrl;
+      }
+
+      const { data, error } = await connectSupabase
+        .from("employee")
+        .update({
+          emp_name: updatedata.name,
+          emp_email: updatedata.email,
+          emp_phone: updatedata.phone,
+          avatarUrl: imgurl,
+          department: updatedata.department,
+          role: updatedata.role,
+          status: updatedata.status,
+        })
+        .eq("id", updatedata.id)
+        .select();
+
+      if (error) {
+        console.log(error);
+        return;
+      }
+
+      console.log("Updated Successfully");
+      console.log(data);
+
+      seteditopen(false);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  return (
+    <Modal
+      open={editopen}
+      onOpenChange={seteditopen}
+      title="Edit employee"
+      description="Upadate teammate Information."
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => seteditopen(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" form="employe-form" onClick={updatedetails} >
+            Update details
+          </Button>
+        </>
+      }
+    >
+      <form
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        onSubmit={(e) => e.preventDefault()}
+        id="employe-form"
+      >
+        <div className="sm:col-span-2 flex items-center gap-4">
+          <div className="grid h-16 w-16 place-items-center rounded-full border border-dashed border-border bg-muted text-muted-foreground">
+            <Upload className="h-5 w-5" />
+          </div>
+          <div>
+            <Input
+              id="e-pic"
+              type="file"
+              accept="image/*"
+              required
+              onChange={(e) => setupdateimage(e.target.files?.[0] ?? null)}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">PNG or JPG up to 2MB.</p>
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="e-name">Full name</Label>
+          <Input
+            id="e-name"
+            placeholder="e.g. Jane Cooper"
+            className="mt-1.5"
+            required
+            onChange={(e) => setupdatedata((prev) => ({ ...prev, name: e.target.value }))}
+
+          />
+        </div>
+        <div>
+          <Label htmlFor="e-email">Email</Label>
+          <Input
+            id="e-email"
+            type="email"
+            placeholder="jane@company.com"
+            className="mt-1.5"
+            required
+            onChange={(e) => setupdatedata((prev) => ({ ...prev, email: e.target.value }))}
+
+          />
+        </div>
+        <div>
+          <Label htmlFor="e-phone">Phone</Label>
+          <Input
+            id="e-phone"
+            placeholder="+1 555 000 0000"
+            className="mt-1.5"
+            required
+            onChange={(e) => setupdatedata((prev) => ({ ...prev, phone: e.target.value }))}
+
+          />
+        </div>
+        <div>
+          <Label>Department</Label>
+          <Select
+            value={updatedata.department}
+            required
+            onValueChange={(value) => setupdatedata((prev) => ({ ...prev, department: value }))}
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="engineering">Engineering</SelectItem>
+              <SelectItem value="design">Design</SelectItem>
+              <SelectItem value="product">Product</SelectItem>
+              <SelectItem value="marketing">Marketing</SelectItem>
+              <SelectItem value="sales">Sales</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Status</Label>
+          <Select value={updatedata.status}
+            required
+            onValueChange={(value) => setupdatedata((prev) => ({ ...prev, status: value }))}
+          >
+            <SelectTrigger className="mt-1.5"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="away">Away</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="e-role">Designation</Label>
+          <Input
+            id="e-role"
+            placeholder="e.g. Senior Product Designer"
+            className="mt-1.5"
+            required
+            onChange={(e) => setupdatedata((prev) => ({ ...prev, role: e.target.value }))}
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+
+
+
 
 function AddEmployeeModal({
   open,
@@ -185,7 +424,7 @@ function AddEmployeeModal({
     avatarUrl: "",
     department: "",
     role: "",
-    status: "active",
+    status: "",
   });
 
   const [image, setimage] = useState<File | null>();
@@ -342,6 +581,18 @@ function AddEmployeeModal({
             </SelectContent>
           </Select>
         </div>
+        <div>
+          <Label>Status</Label>
+          <Select value={formData.status}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+          >
+            <SelectTrigger className="mt-1.5"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent >
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="away">Away</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="sm:col-span-2">
           <Label htmlFor="e-role">Designation</Label>
           <Input
@@ -361,3 +612,5 @@ function AddEmployeeModal({
     </Modal>
   );
 }
+
+
