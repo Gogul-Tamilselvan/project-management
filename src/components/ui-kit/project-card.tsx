@@ -15,8 +15,10 @@ interface ProjectCardProps {
   onDelete?: (p: Project) => void;
 }
 
-export function ProjectCard({ project, onView, onEdit, onDelete }: ProjectCardProps) {
+export function ProjectCard({ project, onView, onEdit, onDelete}: ProjectCardProps) {
   const team = project.teamIds.map((id) => employeesById[id]).filter(Boolean);
+
+ 
 
   return (
     <motion.article

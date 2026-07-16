@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +14,9 @@ import {
 import { ProjectCard } from "@/components/ui-kit/project-card";
 import { Modal } from "@/components/ui-kit/modal";
 import { EmptyState } from "@/components/ui-kit/empty-state";
-import { mockProjects } from "@/lib/mock/projects";
-import type { ProjectStatus } from "@/lib/types";
+import type { ProjectStatus, Project } from "@/lib/types";
+import { connectSupabase } from "@/services/config";
+
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
@@ -25,15 +26,76 @@ const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "Completed", value: "completed" },
 ];
 
+
+
 export function ProjectsPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ProjectStatus | "all">("all");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [mode, setMode] = useState<"create" | "edit" | "view">("create");
 
-  const visible = mockProjects.filter(
+
+  useEffect(() => {
+    getProjects();
+  }, []);
+
+  const handleDelete = async (project: Project) => {
+    const { error } = await connectSupabase
+      .from("projects")
+      .delete()
+      .eq("id", project.id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    getProjects();
+  };
+
+  const handleEdit = (project: Project) => {
+    setMode("edit");
+    setEditingProject(project);
+    setOpen(true);
+  };
+
+  const handleView = (project: Project) => {
+    setMode("view");
+    setEditingProject(project);
+    setOpen(true);
+  };
+
+  const getProjects = async () => {
+    const { data, error } = await connectSupabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    const formattedProjects: Project[] = data.map((item) => ({
+      id: item.id,
+      name: item.project_name,
+      description: item.description,
+      status: item.status,
+      progress: 0,
+      startDate: item.start_date,
+      dueDate: item.end_date,
+      teamIds: [],
+    }));
+
+    setProjects(formattedProjects);
+  };
+
+  const visible = projects.filter(
     (p) =>
       (status === "all" || p.status === status) &&
-      (query === "" || p.name.toLowerCase().includes(query.toLowerCase())),
+      (query === "" || p.name.toLowerCase().includes(query.toLowerCase()))
   );
 
   return (
@@ -45,7 +107,11 @@ export function ProjectsPage() {
             Plan, track, and ship every initiative across your workspace.
           </p>
         </div>
-        <Button className="gap-1.5" onClick={() => setOpen(true)}>
+        <Button className="gap-1.5" onClick={() => {
+          setEditingProject(null);
+          setMode("create");
+          setOpen(true);
+        }}>
           <Plus className="h-4 w-4" /> Create project
         </Button>
       </div>
@@ -90,12 +156,18 @@ export function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((p) => (
-            <ProjectCard key={p.id} project={p} onView={() => console.log("view", p.id)} />
+            <ProjectCard key={p.id} project={p} onEdit={handleEdit} onDelete={handleDelete} onView={handleView} />
           ))}
         </div>
       )}
 
-      <CreateProjectModal open={open} onOpenChange={setOpen} />
+      <CreateProjectModal open={open} onOpenChange={setOpen} onCreate={getProjects} editingProject={editingProject} mode={mode} resetModal={() => {
+        setEditingProject(null);
+        setMode("create");
+      }} />
+
+
+
     </div>
   );
 }
@@ -103,37 +175,195 @@ export function ProjectsPage() {
 function CreateProjectModal({
   open,
   onOpenChange,
+  onCreate,
+  editingProject,
+  mode,
+  resetModal,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onCreate: () => void;
+  resetModal: () => void;
+  editingProject: Project | null;
+  mode: "create" | "edit" | "view";
 }) {
+
+  interface ProjectFormData {
+    id: string;
+    name: string;
+    description: string;
+    status: ProjectStatus;
+    progress: number;
+    startDate: string;
+    dueDate: string;
+    teamIds: string[];
+  }
+
+  const [formData, setFormData] = useState<ProjectFormData>({
+    id: "",
+    name: "",
+    description: "",
+    status: "planning",
+    progress: 0,
+    startDate: "",
+    dueDate: "",
+    teamIds: [],
+  });
+
+  useEffect(() => {
+    if (editingProject) {
+      setFormData({
+        id: editingProject.id,
+        name: editingProject.name,
+        description: editingProject.description,
+        status: editingProject.status,
+        progress: editingProject.progress,
+        startDate: editingProject.startDate,
+        dueDate: editingProject.dueDate,
+        teamIds: editingProject.teamIds,
+      });
+    } else {
+      setFormData({
+        id: "",
+        name: "",
+        description: "",
+        status: "planning",
+        progress: 0,
+        startDate: "",
+        dueDate: "",
+        teamIds: []
+      });
+    }
+  }, [editingProject]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (mode === "view") return;
+
+    if (editingProject) {
+      // UPDATE PROJECT
+      const { error } = await connectSupabase
+        .from("projects")
+        .update({
+          project_name: formData.name,
+          description: formData.description,
+          status: formData.status,
+          start_date: formData.startDate,
+          end_date: formData.dueDate,
+        })
+        .eq("id", editingProject.id);
+
+      if (error) {
+        console.error("Update Error:", error);
+        return;
+      }
+    } else {
+      // CREATE PROJECT
+      const {
+        data: { user },
+      } = await connectSupabase.auth.getUser();
+
+      const { error } = await connectSupabase
+        .from("projects")
+        .insert({
+          project_name: formData.name,
+          description: formData.description,
+          status: formData.status,
+          start_date: formData.startDate,
+          end_date: formData.dueDate,
+        });
+
+      if (error) {
+        console.error("Insert Error:", error);
+        return;
+      }
+    }
+
+    // Refresh project list
+    onCreate();
+
+    // Reset form
+    setFormData({
+      id: "",
+      name: "",
+      description: "",
+      status: "planning",
+      progress: 0,
+      startDate: "",
+      dueDate: "",
+      teamIds: [],
+    });
+
+    resetModal();
+
+    // Close modal
+    onOpenChange(false);
+  };
+
+
   return (
     <Modal
       open={open}
-      onOpenChange={onOpenChange}
-      title="Create new project"
-      description="Set up a new project. You can invite team members after creating."
+      onOpenChange={(value) => {
+        if (!value) {
+          resetModal();
+        }
+        onOpenChange(value);
+      }}
+      title={
+        mode === "create"
+          ? "Create New Project"
+          : mode === "edit"
+            ? "Edit Project"
+            : "Project Details"
+      }
+      description={
+        mode === "create"
+          ? "Set up a new project. You can invite team members after creating."
+          : mode === "edit"
+            ? "Update your project details."
+            : "View project information."
+      }
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button variant="ghost" onClick={() => {
+            resetModal();
+            onOpenChange(false);
+          }}>
+            {mode === "view" ? "Close" : "Cancel"}
           </Button>
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              console.log("create project (mock)");
-              onOpenChange(false);
-            }}
-          >
-            Create project
-          </Button>
+          {mode !== "view" && (
+            <Button type="submit" form="project-form">
+              {mode === "create"
+                ? "Create Project"
+                : "Update Project"}
+            </Button>
+          )}
         </>
       }
     >
-      <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
+      <form id="project-form" className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
         <div className="sm:col-span-2">
           <Label htmlFor="p-name">Project name</Label>
-          <Input id="p-name" placeholder="e.g. Mobile App v3" className="mt-1.5" />
+          <Input
+            id="p-name"
+            placeholder="e.g. Mobile App v3"
+            className="mt-1.5"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            readOnly={mode === "view"}
+          />
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="p-desc">Description</Label>
@@ -142,22 +372,52 @@ function CreateProjectModal({
             placeholder="What is this project about?"
             className="mt-1.5"
             rows={3}
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            readOnly={mode === "view"}
           />
         </div>
         <div>
           <Label htmlFor="p-start">Start date</Label>
-          <Input id="p-start" type="date" className="mt-1.5" />
+          <Input
+            id="p-start"
+            type="date"
+            className="mt-1.5"
+            name="startDate"
+            value={formData.startDate}
+            onChange={handleChange}
+            readOnly={mode === "view"}
+          />
         </div>
         <div>
           <Label htmlFor="p-end">End date</Label>
-          <Input id="p-end" type="date" className="mt-1.5" />
+          <Input
+            id="p-end"
+            type="date"
+            className="mt-1.5"
+            name="dueDate"
+            value={formData.dueDate}
+            onChange={handleChange}
+            readOnly={mode === "view"}
+          />
         </div>
         <div className="sm:col-span-2">
           <Label>Status</Label>
-          <Select defaultValue="planning">
+          <Select
+            value={formData.status}
+            disabled={mode === "view"}
+            onValueChange={(value: string) =>
+              setFormData((prev) => ({
+                ...prev,
+                status: value as ProjectStatus,
+              }))
+            }
+          >
             <SelectTrigger className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
+
             <SelectContent>
               <SelectItem value="planning">Planning</SelectItem>
               <SelectItem value="in_progress">In progress</SelectItem>
