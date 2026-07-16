@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Plus, MoreHorizontal, Upload, Search } from "lucide-react";
+import {
+  Plus,
+  MoreHorizontal,
+  Upload,
+  Search,
+  Mail,
+  Phone,
+  Building2,
+  Briefcase,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,17 +36,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui-kit/modal";
 import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
-import { mockEmployees } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
-import { useNavigate } from "react-router-dom";
 
 interface EmployeDB {
-  id: number;
+  id: string;
   emp_name: string;
   emp_email: string;
-  phone: string;
+  emp_phone: string;
   avatarUrl?: string;
   department: string;
   role: string;
@@ -45,35 +52,28 @@ interface EmployeDB {
 }
 
 export function EmployeesPage() {
-  const [open, setOpen] = useState(false);
-  const [editopen, seteditopen] = useState(false);
+  const [open, setOpen] = useState<boolean>(false);
+  const [editopen, seteditopen] = useState<boolean>(false);
+  const [profile, setprofile] = useState<boolean>(false);
+  const [proDetails, setproDetails] = useState<EmployeDB>();
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeDB | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState<string>("");
   const [data, setData] = useState<EmployeDB[]>();
-  const navigate = useNavigate();
-
   const visible = data?.filter((e) =>
     (e.emp_name + e.emp_email + e.department).toLowerCase().includes(query.toLowerCase()),
   );
-
-
-  const deleteemploye = async (id: number) => {
-
+  const deleteemploye = async (id: string) => {
     const { error } = await connectSupabase.from("employee").delete().eq("id", id);
     if (error) {
       console.log("delete error", error);
       return;
     }
-    console.log("delete succesfully")
-
-  }
+  };
   const getEmployes = async () => {
     const { data, error } = await connectSupabase.from("employee").select();
     if (error) {
       console.log(error);
     } else {
-      console.log("datas");
-      console.log(data);
       setData(data);
     }
   };
@@ -81,7 +81,6 @@ export function EmployeesPage() {
   useEffect(() => {
     getEmployes();
   }, []);
-
 
   useEffect(() => {
     const channel = connectSupabase
@@ -117,7 +116,6 @@ export function EmployeesPage() {
           <Plus className="h-4 w-4" /> Add employee
         </Button>
       </div>
-
       <div className="relative w-full sm:max-w-xs">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -127,7 +125,6 @@ export function EmployeesPage() {
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
         <div className="overflow-x-auto">
           <Table>
@@ -141,52 +138,113 @@ export function EmployeesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visible?.map((e) => (
-                <TableRow key={e.id} className="border-border">
-                  <TableCell className="pl-6 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={e.avatarUrl} alt={e.emp_name} />
-                        <AvatarFallback>{initials(e.emp_name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <div className="font-medium text-foreground" >{e.emp_name}</div>
-                        <div className="text-xs text-muted-foreground">{e.emp_email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{e.department}</TableCell>
-                  <TableCell className="text-sm text-foreground">{e.role}</TableCell>
-                  <TableCell>
-                    <EmployeeStatusBadge status={e.status} />
-                  </TableCell>
-                  <TableCell className="pr-6 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Row actions">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem  onClick={()=>navigate("/profile")}>View Profile</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setSelectedEmployee(e); seteditopen(true) }}>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => deleteemploye(e.id)}>Remove</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {visible?.length == 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="h-15 text-center align-middle text-muted-foreground"
+                  >
+                    No results found
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                visible?.map((e, idx) => (
+                  <TableRow key={idx} className="border-border">
+                    <TableCell className="pl-6 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={e.avatarUrl} alt={e.emp_name} />
+                          <AvatarFallback>{initials(e.emp_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="font-medium text-foreground">{e.emp_name}</div>
+                          <div className="text-xs text-muted-foreground">{e.emp_email}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground capitalize">
+                      {e.department}
+                    </TableCell>
+                    <TableCell className="text-sm text-foreground capitalize">{e.role}</TableCell>
+                    <TableCell>
+                      <EmployeeStatusBadge status={e.status} />
+                    </TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="Row actions">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setprofile(true);
+                              setproDetails(e);
+                            }}
+                          >
+                            View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedEmployee(e);
+                              seteditopen(true);
+                            }}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => deleteemploye(e.id)}
+                          >
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
       </div>
-
+      <Modal
+        open={profile}
+        onOpenChange={setprofile}
+        title="Employee Profile"
+        description="Review and manage employee records, details, and status."
+      >
+        {/* <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2"> */}
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
+            <AvatarImage src={proDetails?.avatarUrl} alt={proDetails?.emp_name} />
+            <AvatarFallback className="text-2xl">
+              {initials(proDetails?.emp_name ?? "")}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-xl font-bold text-foreground">{proDetails?.emp_name}</h2>
+              <EmployeeStatusBadge status={proDetails?.status ?? "active"} />
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground capitalize">{proDetails?.role}</p>
+          </div>
+        </div>
+        {proDetails && (
+          <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-2">
+            <InfoRow icon={Mail} label="Email" value={proDetails?.emp_email} />
+            <InfoRow icon={Phone} label="Phone" value={proDetails?.emp_phone} />
+            <InfoRow icon={Building2} label="Department" value={proDetails?.department} />
+            <InfoRow icon={Briefcase} label="Role" value={proDetails?.role} />
+          </div>
+        )}
+      </Modal>
       <AddEmployeeModal open={open} onOpenChange={setOpen} />
       <EditEmployeeModal editopen={editopen} seteditopen={seteditopen} employe={selectedEmployee} />
     </div>
   );
 }
-
 
 function EditEmployeeModal({
   editopen,
@@ -197,19 +255,16 @@ function EditEmployeeModal({
   seteditopen: (v: boolean) => void;
   employe: EmployeDB | null;
 }) {
-
   const [updatedata, setupdatedata] = useState<Employee>({
-    id: 0,
+    id: "",
     name: "",
     email: "",
     phone: "",
     avatarUrl: "",
     department: "",
     role: "",
-    status: "",
+    status: "active",
   });
-
-
   const [updateimage, setupdateimage] = useState<File | null>(null);
 
   useEffect(() => {
@@ -218,7 +273,7 @@ function EditEmployeeModal({
         id: employe.id,
         name: employe.emp_name,
         email: employe.emp_email,
-        phone: employe.phone,
+        phone: employe.emp_phone,
         avatarUrl: employe.avatarUrl || "",
         department: employe.department,
         role: employe.role,
@@ -241,20 +296,16 @@ function EditEmployeeModal({
 
         const filepath = `avatarUrl/${filename}`;
 
-        const { error: imageerror } =
-          await connectSupabase.storage
-            .from("Employe")
-            .upload(filepath, updateimage);
+        const { error: imageerror } = await connectSupabase.storage
+          .from("Employe")
+          .upload(filepath, updateimage);
 
         if (imageerror) {
           console.log(imageerror);
           return;
         }
 
-        const { data: urlData } =
-          connectSupabase.storage
-            .from("Employe")
-            .getPublicUrl(filepath);
+        const { data: urlData } = connectSupabase.storage.from("Employe").getPublicUrl(filepath);
 
         imgurl = urlData.publicUrl;
       }
@@ -277,10 +328,8 @@ function EditEmployeeModal({
         console.log(error);
         return;
       }
-
       console.log("Updated Successfully");
       console.log(data);
-
       seteditopen(false);
     } catch (error) {
       console.log(error);
@@ -298,7 +347,7 @@ function EditEmployeeModal({
           <Button variant="ghost" onClick={() => seteditopen(false)}>
             Cancel
           </Button>
-          <Button type="submit" form="employe-form" onClick={updatedetails} >
+          <Button type="submit" form="employe-form" onClick={updatedetails}>
             Update details
           </Button>
         </>
@@ -330,9 +379,9 @@ function EditEmployeeModal({
             id="e-name"
             placeholder="e.g. Jane Cooper"
             className="mt-1.5"
+            value={updatedata.name}
             required
             onChange={(e) => setupdatedata((prev) => ({ ...prev, name: e.target.value }))}
-
           />
         </div>
         <div>
@@ -342,9 +391,9 @@ function EditEmployeeModal({
             type="email"
             placeholder="jane@company.com"
             className="mt-1.5"
+            value={updatedata.email}
             required
             onChange={(e) => setupdatedata((prev) => ({ ...prev, email: e.target.value }))}
-
           />
         </div>
         <div>
@@ -352,10 +401,10 @@ function EditEmployeeModal({
           <Input
             id="e-phone"
             placeholder="+1 555 000 0000"
+            value={updatedata.phone}
             className="mt-1.5"
             required
             onChange={(e) => setupdatedata((prev) => ({ ...prev, phone: e.target.value }))}
-
           />
         </div>
         <div>
@@ -378,36 +427,39 @@ function EditEmployeeModal({
           </Select>
         </div>
         <div>
-          <Label>Status</Label>
-          <Select value={updatedata.status}
-            required
-            onValueChange={(value) => setupdatedata((prev) => ({ ...prev, status: value }))}
-          >
-            <SelectTrigger className="mt-1.5"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="away">Away</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="sm:col-span-2">
           <Label htmlFor="e-role">Designation</Label>
           <Input
             id="e-role"
             placeholder="e.g. Senior Product Designer"
             className="mt-1.5"
+            value={updatedata.role}
             required
             onChange={(e) => setupdatedata((prev) => ({ ...prev, role: e.target.value }))}
           />
+        </div>
+        <div>
+          <Label>Status</Label>
+          <Select
+            value={updatedata.status}
+            required
+            onValueChange={(value: EmployeeStatus) =>
+              setupdatedata((prev) => ({ ...prev, status: value }))
+            }
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="away">Away</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </form>
     </Modal>
   );
 }
-
-
-
-
 
 function AddEmployeeModal({
   open,
@@ -424,7 +476,7 @@ function AddEmployeeModal({
     avatarUrl: "",
     department: "",
     role: "",
-    status: "",
+    status: "active",
   });
 
   const [image, setimage] = useState<File | null>();
@@ -449,25 +501,33 @@ function AddEmployeeModal({
 
       const imageUrl = urlData.publicUrl;
 
-      const { data, error } = await connectSupabase
-        .from("employee")
-        .insert([
-          {
-            emp_name: formData.name,
-            emp_email: formData.email,
-            emp_phone: formData.phone,
-            avatarUrl: imageUrl,
-            department: formData.department,
-            role: formData.role,
-            status: formData.status,
-          },
-        ])
-        .select();
-
-      if (error) {
-        console.log(error);
-      } else {
-        console.log(data);
+      if (
+        formData.name.trim() !== "" &&
+        formData.email.trim() !== "" &&
+        formData.phone.trim() !== "" &&
+        formData.department.trim() !== "" &&
+        formData.role.trim() !== ""
+      ) {
+        const { data, error } = await connectSupabase
+          .from("employee")
+          .insert([
+            {
+              emp_name: formData.name,
+              emp_email: formData.email,
+              emp_phone: formData.phone,
+              avatarUrl: imageUrl,
+              department: formData.department,
+              role: formData.role,
+              status: formData.status,
+            },
+          ])
+          .select();
+        if (error) {
+          console.log(error);
+        } else {
+          console.log(data);
+        }
+        onOpenChange(false);
       }
     } catch (error) {
       console.log(error);
@@ -582,18 +642,6 @@ function AddEmployeeModal({
           </Select>
         </div>
         <div>
-          <Label>Status</Label>
-          <Select value={formData.status}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
-          >
-            <SelectTrigger className="mt-1.5"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent >
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="away">Away</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="sm:col-span-2">
           <Label htmlFor="e-role">Designation</Label>
           <Input
             id="e-role"
@@ -608,9 +656,50 @@ function AddEmployeeModal({
             }
           />
         </div>
+        <div>
+          <Label>Status</Label>
+          <Select
+            value={formData.status}
+            onValueChange={(value: EmployeeStatus) =>
+              setFormData((prev) => ({
+                ...prev,
+                status: value,
+              }))
+            }
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="away">Away</SelectItem>
+              <SelectItem value="away">Offline</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </form>
     </Modal>
   );
 }
 
-
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="truncate text-sm font-medium text-foreground">{value}</p>
+      </div>
+    </div>
+  );
+}
