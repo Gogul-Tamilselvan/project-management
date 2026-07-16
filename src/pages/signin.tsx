@@ -3,11 +3,11 @@ import React, { useState } from "react";
 import { connectSupabase } from "@/services/config";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface FormDataType {
   email: string;
   password: string;
-  message: string;
   loading: boolean;
 }
 
@@ -15,7 +15,6 @@ export function SigninPage() {
   const [formData, setFormData] = useState<FormDataType>({
     email: "",
     password: "",
-    message: "",
     loading: false,
   });
 
@@ -36,18 +35,15 @@ export function SigninPage() {
     });
 
     if (error) {
-      let message = error.message;
-
       if (error.message.toLowerCase().includes("invalid login credentials")) {
-        message = "Invalid email or password.";
+        toast.error("Invalid email or password.");
       } else if (error.message.toLowerCase().includes("email not confirmed")) {
-        message = "Please verify your email before signing in.";
+        toast.info("Please verify your email before signing in.");
       }
 
       setFormData((prev) => ({
         ...prev,
         loading: false,
-        message,
       }));
 
       return;
@@ -56,11 +52,10 @@ export function SigninPage() {
     setFormData((prev) => ({
       ...prev,
       loading: false,
-      message: "Sign in successful.",
       email: "",
       password: "",
     }));
-
+    toast.success("Sign in successful.");
     setTimeout(() => {
       navigate("/dashboard");
     }, 500);
@@ -75,13 +70,6 @@ export function SigninPage() {
 
           <p className="mt-1 text-sm  text-muted-foreground">Sign in to access your account</p>
         </div>
-
-        {/* Message */}
-        {formData.message && (
-          <div className="mb-4 p-3 rounded-lg border text-foreground text-center text-sm bg-card">
-            {formData.message}
-          </div>
-        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

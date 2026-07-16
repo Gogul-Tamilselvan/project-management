@@ -3,12 +3,12 @@ import React, { useState } from "react";
 import { connectSupabase } from "@/services/config";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface FormDataType {
   name: string;
   email: string;
   password: string;
-  message: string;
   loading: boolean;
 }
 
@@ -17,7 +17,6 @@ export function SignupPage() {
     name: "",
     email: "",
     password: "",
-    message: "",
     loading: false,
   });
 
@@ -27,7 +26,6 @@ export function SignupPage() {
     setFormData((prev) => ({
       ...prev,
       loading: true,
-      message: "",
     }));
 
     const { data, error } = await connectSupabase.auth.signUp({
@@ -45,39 +43,22 @@ export function SignupPage() {
         error.message.toLowerCase().includes("already") ||
         error.message.toLowerCase().includes("exists")
       ) {
-        setFormData((prev) => ({
-          ...prev,
-          message: "This account is already registered.",
-        }));
+        toast.error("This account is already registered.");
       } else {
-        setFormData((prev) => ({
-          ...prev,
-          message: error.message,
-        }));
+        toast.error(error.message);
       }
       setFormData((prev) => ({
         ...prev,
         loading: false,
       }));
-
       return;
     }
-
     // when the user already exists.
     if (data.user?.identities?.length === 0) {
-      setFormData((prev) => ({
-        ...prev,
-        message: "This account is already registered.",
-        loading: true,
-      }));
+      toast.error("This account is already registered.");
       return;
     }
-
-    setFormData((prev) => ({
-      ...prev,
-      message: "Registration successful. Please SignIn.",
-    }));
-
+    toast.success("Registration successful. Please SignIn.");
     setFormData((prev) => ({
       ...prev,
       name: "",
@@ -96,13 +77,6 @@ export function SignupPage() {
 
           <p className="mt-1 text-sm text-muted-foreground">Register your details.</p>
         </div>
-
-        {/* Message */}
-        {formData.message && (
-          <div className="mb-4 p-3 rounded-lg border text-foreground  text-center text-sm bg-card">
-            {formData.message}
-          </div>
-        )}
 
         {/* Form */}
         <form onSubmit={handlesubmit} className="space-y-4">

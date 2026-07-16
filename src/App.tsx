@@ -9,6 +9,7 @@ import { SettingsPage } from "@/pages/settings";
 import { SignupPage } from "./pages/signup";
 import { SigninPage } from "./pages/signin";
 import { useEffect, useState } from "react";
+import { Toaster } from "sonner";
 
 function NotFoundPage() {
   return (
@@ -33,7 +34,7 @@ function NotFoundPage() {
 }
 
 export function App() {
-  const [logged, setlogged] = useState<boolean>(false);
+  const [logged, setlogged] = useState<boolean>(true);
 
   useEffect(() => {
     const userLogged = localStorage.getItem(`userLogged`);
@@ -43,23 +44,26 @@ export function App() {
   }, []);
 
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/signin" replace />} />
+    <>
+      <Toaster position="top-right" />
+      <Routes>
+        <Route path="/" element={<Navigate to="/signin" replace />} />
 
-      <Route path="/signin" element={<SigninPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+        <Route path="/signin" element={<SigninPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
-      {logged && (
-        <Route element={<AppShell />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
-          <Route path="employees" element={<EmployeesPage />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-      )}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+        {logged && (
+          <Route element={<AppShell />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="employees" element={<EmployeesPage />} />
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+        )}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </>
   );
 }

@@ -8,6 +8,8 @@ import {
   Phone,
   Building2,
   Briefcase,
+  Pencil,
+  KeyRound,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -36,9 +38,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui-kit/modal";
 import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
+import { mockEmployees } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface EmployeDB {
   id: string;
@@ -65,14 +70,16 @@ export function EmployeesPage() {
   const deleteemploye = async (id: string) => {
     const { error } = await connectSupabase.from("employee").delete().eq("id", id);
     if (error) {
-      console.log("delete error", error);
+      toast.error("delete error" + error);
+      // console.log("delete error", error);
       return;
-    }
+    } else toast.success("deleted successfully");
   };
   const getEmployes = async () => {
-    const { data, error } = await connectSupabase.from("employee").select();
-    if (error) {
-      console.log(error);
+    const { data, error: err } = await connectSupabase.from("employee").select();
+    if (err) {
+      console.log(err);
+      toast.error(err.message);
     } else {
       setData(data);
     }
@@ -285,7 +292,7 @@ function EditEmployeeModal({
   const updatedetails = async () => {
     try {
       if (!updatedata.id) {
-        console.log("Employee id not found");
+        toast.error("Employee not found");
         return;
       }
 
@@ -301,7 +308,7 @@ function EditEmployeeModal({
           .upload(filepath, updateimage);
 
         if (imageerror) {
-          console.log(imageerror);
+          toast.error(imageerror.message);
           return;
         }
 
@@ -325,14 +332,13 @@ function EditEmployeeModal({
         .select();
 
       if (error) {
-        console.log(error);
+        toast.error(error.message);
         return;
       }
-      console.log("Updated Successfully");
-      console.log(data);
+      toast.success("Updated Successfully");
       seteditopen(false);
     } catch (error) {
-      console.log(error);
+      toast.error((error as Error).message);
     }
   };
 
@@ -367,7 +373,6 @@ function EditEmployeeModal({
               id="e-pic"
               type="file"
               accept="image/*"
-              required
               onChange={(e) => setupdateimage(e.target.files?.[0] ?? null)}
             />
             <p className="mt-1 text-xs text-muted-foreground">PNG or JPG up to 2MB.</p>
@@ -484,7 +489,7 @@ function AddEmployeeModal({
   const addEmploye = async () => {
     try {
       if (!image) {
-        console.log("Please select an image.");
+        toast.info("Please select an image.");
         return;
       }
 
@@ -523,14 +528,12 @@ function AddEmployeeModal({
           ])
           .select();
         if (error) {
-          console.log(error);
-        } else {
-          console.log(data);
-        }
+          toast.error(error.message);
+        } else toast.success("Employee added!");
         onOpenChange(false);
       }
     } catch (error) {
-      console.log(error);
+      toast.error((error as Error).message);
     }
   };
 
@@ -673,7 +676,7 @@ function AddEmployeeModal({
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="away">Away</SelectItem>
-              <SelectItem value="away">Offline</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
             </SelectContent>
           </Select>
         </div>
