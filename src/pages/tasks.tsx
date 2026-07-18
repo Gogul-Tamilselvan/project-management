@@ -41,7 +41,10 @@ interface proTitle {
 }
 
 export function TasksPage() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<boolean>(false);
+  const [viewTask, setViewTask] = useState<boolean>(false);
+  const [taskdetail, settaskdetail] = useState<taskType>();
+
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<Priority | "all">("all");
   const [status, setStatus] = useState<TaskStatus | "all">("all");
@@ -54,7 +57,6 @@ export function TasksPage() {
     if (error) {
       console.log(error.message);
     } else {
-      console.log(data);
       settask(data);
     }
   };
@@ -65,7 +67,6 @@ export function TasksPage() {
       console.log(error.message);
     } else {
       setEmpName(data);
-      console.log(data);
     }
 
     getTasks();
@@ -77,7 +78,7 @@ export function TasksPage() {
       console.log(error.message);
     } else {
       setProject(data);
-      console.log(data);
+      // console.log(data);
     }
 
     getTasks();
@@ -213,7 +214,14 @@ export function TasksPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Open</DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setViewTask(true);
+                                settaskdetail(t);
+                              }}
+                            >
+                              Open
+                            </DropdownMenuItem>
                             <DropdownMenuItem>Edit</DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
@@ -239,6 +247,8 @@ export function TasksPage() {
         empName={empName}
         projectTitle={project}
       />
+
+      {/* <ViewTask open={viewTask} onOpenChange={setViewTask} value={taskdetail} /> */}
     </div>
   );
 }
@@ -297,7 +307,7 @@ function CreateTaskModal({
       });
 
       if (error) {
-        console.log(error.message);
+        console.log(error);
       } else {
         onOpenChange(false);
         console.log(data);
@@ -351,7 +361,7 @@ function CreateTaskModal({
           <Label>Project</Label>
           <Select
             required
-            onValueChange={(val) => setprojectDetail((prev) => ({ ...prev, projectId: val }))}
+            onValueChange={(val) => setprojectDetail((prev) => ({ ...prev, project: val }))}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select project" />
@@ -374,7 +384,7 @@ function CreateTaskModal({
 
               setprojectDetail((prev) => ({
                 ...prev,
-                assigneeId: employee.emp_name,
+                assignee: employee.emp_name,
                 emp_image: employee.avatarUrl,
               }));
             }}
@@ -425,10 +435,182 @@ function CreateTaskModal({
             required
             type="date"
             className="mt-1.5"
-            onChange={(e) => setprojectDetail((prev) => ({ ...prev, dueDate: e.target.value }))}
+            onChange={(e) => setprojectDetail((prev) => ({ ...prev, duedate: e.target.value }))}
           />
         </div>
       </form>
     </Modal>
   );
 }
+
+// function ViewTask({
+//   open,
+//   onOpenChange,
+//   value,
+// }: {
+//   open: boolean;
+//   onOpenChange: (v: boolean) => void;
+//   value: taskType;
+// }) {
+//   return (
+//     <Modal
+//       open={open}
+//       onOpenChange={onOpenChange}
+//       title="Create new task"
+//       description="Add a new task and assign it to a teammate."
+//       footer={
+//         <>
+//           <Button variant="ghost" onClick={() => onOpenChange(false)}>
+//             Cancel
+//           </Button>
+//           <Button type="submit" form="task-from" onClick={() => console.log(value)}>
+//             Create task
+//           </Button>
+//         </>
+//       }
+//     >
+//       <form
+//         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+//         id="task-from"
+//         onSubmit={(e) => e.preventDefault()}
+//       >
+//         <div className="sm:col-span-2">
+//           <Label htmlFor="t-name">Task title</Label>
+//           <Input
+//             id="t-name"
+//             placeholder="What needs to get done?"
+//             className="mt-1.5"
+//             required
+//             readOnly
+//             defaultValue={value?.title}
+//             // onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
+//           />
+//         </div>
+//         <div className="sm:col-span-2">
+//           <Label htmlFor="t-desc">Description</Label>
+//           <Textarea
+//             id="t-desc"
+//             required
+//             rows={3}
+//             className="mt-1.5"
+//             readOnly
+//             defaultValue={value?.description}
+//             // onChange={(e) => setprojectDetail((prev) => ({ ...prev, description: e.target.value }))}
+//           />
+//         </div>
+//         <div>
+//           <Label>Project</Label>
+//           <Input
+//             id="t-name"
+//             placeholder="What needs to get done?"
+//             className="mt-1.5"
+//             required
+//             readOnly
+//             defaultValue={value?.project}
+//             // onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
+//           />
+//           {/* <Select
+//             required
+//             defaultValue={value?.project}
+//              onValueChange={(val) => setprojectDetail((prev) => ({ ...prev, projectId: val }))}
+//           >
+//             <SelectTrigger className="mt-1.5">
+//               <SelectValue placeholder="Select project" />
+//             </SelectTrigger>
+//             <SelectContent>
+//               {/* {projectTitle?.map((p, idx: number) => (
+//                 <SelectItem key={idx} value={p.project_name}>
+//                   {p.project_name}
+//                 </SelectItem>
+//               ))}
+//             </SelectContent>
+//           </Select> */}
+//         </div>
+//         <div>
+//           <Label>Assignee</Label>
+//           <Input
+//             id="t-name"
+//             placeholder="What needs to get done?"
+//             className="mt-1.5"
+//             required
+//             readOnly
+//             defaultValue={value?.assignee}
+//             // onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
+//           />
+//           {/* <Select
+//             required
+//             defaultValue={value?.assignee}
+//             // onValueChange={(val) => {
+//             //   const employee = JSON.parse(val);
+
+//             //   setprojectDetail((prev) => ({
+//             //     ...prev,
+//             //     assigneeId: employee.emp_name,
+//             //     emp_image: employee.avatarUrl,
+//             //   }));
+//             // }}
+//           >
+//             <SelectTrigger className="mt-1.5">
+//               <SelectValue placeholder="Select employee" />
+//             </SelectTrigger>
+
+//             <SelectContent>
+//               {empName?.map((e, idx: number) => (
+//                 <SelectItem
+//                   key={idx}
+//                   value={JSON.stringify({
+//                     emp_name: e.emp_name,
+//                     avatarUrl: e.avatarUrl,
+//                   })}
+//                 >
+//                   {e.emp_name}
+//                 </SelectItem>
+//               ))}
+//             </SelectContent>
+//           </Select> */}
+//         </div>
+//         <div>
+//           <Label>Priority</Label>
+//           <Input
+//             id="t-name"
+//             placeholder="What needs to get done?"
+//             className="mt-1.5"
+//             required
+//             readOnly
+//             defaultValue={value?.priority}
+//             // onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
+//           />
+//           {/* <Select
+//             required
+//             defaultValue={value?.priority}
+//             // onValueChange={(val: Priority) =>
+//             //   setprojectDetail((prev) => ({ ...prev, priority: val }))
+//             // }
+//           >
+//             <SelectTrigger className="mt-1.5">
+//               <SelectValue />
+//             </SelectTrigger>
+//             <SelectContent>
+//               <SelectItem value="low">Low</SelectItem>
+//               <SelectItem value="medium">Medium</SelectItem>
+//               <SelectItem value="high">High</SelectItem>
+//               <SelectItem value="urgent">Urgent</SelectItem>
+//             </SelectContent>
+//           </Select> */}
+//         </div>
+//         <div>
+//           <Label htmlFor="t-due">Due date</Label>
+//           <Input
+//             id="t-due"
+//             required
+//             type="date"
+//             readOnly
+//             className="mt-1.5"
+//             defaultValue={value?.duedate}
+//             // onChange={(e) => setprojectDetail((prev) => ({ ...prev, dueDate: e.target.value }))}
+//           />
+//         </div>
+//       </form>
+//     </Modal>
+//   );
+// }
