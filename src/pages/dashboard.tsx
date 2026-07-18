@@ -1,5 +1,13 @@
 import { Link } from "react-router-dom";
-import { FolderKanban, Users, Clock, CheckCircle2, ArrowRight, Plus, CalendarDays } from "lucide-react";
+import {
+  FolderKanban,
+  Users,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+  Plus,
+  CalendarDays,
+} from "lucide-react";
 import { SummaryCard } from "@/components/ui-kit/summary-card";
 import { ProgressBar } from "@/components/ui-kit/progress-bar";
 import {
@@ -23,6 +31,8 @@ import { mockEmployees, mockCurrentUser } from "@/lib/mock/employees";
 import { mockActivities } from "@/lib/mock/activities";
 import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials, relativeTime } from "@/lib/format";
+import { connectSupabase } from "@/services/config";
+import { useEffect } from "react";
 
 const activityIcon = {
   project_created: FolderKanban,
@@ -54,6 +64,24 @@ export function DashboardPage() {
     .filter((t) => t.assigneeId === mockCurrentUser.id || t.status !== "completed")
     .slice(0, 4);
 
+  const getEmployeName = async () => {
+    const { data, error } = await connectSupabase.from("employee").select("emp_name");
+    if (error) {
+      console.log(error.message);
+    } else console.log(data);
+  };
+
+  const getProjectTitle = async () => {
+    const { data, error } = await connectSupabase.from("projects").select("project_name");
+    if (error) {
+      console.log(error.message);
+    } else console.log(data);
+  };
+
+  useEffect(() => {
+    getEmployeName();
+    getProjectTitle();
+  }, []);
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
