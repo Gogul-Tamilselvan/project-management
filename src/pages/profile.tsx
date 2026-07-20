@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Phone, Building2, Briefcase, Pencil, KeyRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -6,18 +6,249 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui-kit/modal";
 import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
-import { mockCurrentUser } from "@/lib/mock/employees";
-import { mockTasks } from "@/lib/mock/tasks";
-import { mockProjects } from "@/lib/mock/projects";
 import { initials } from "@/lib/format";
+import { connectSupabase } from "@/services/config";
+import { EmployeeStatus } from "@/lib/types";
+import { toast } from "sonner";
+
+interface EmployeeDB {
+  id: string;
+  emp_name: string;
+  emp_email: string;
+  emp_phone: string;
+  avatarUrl?: string | null;
+  department: string;
+  role: string;
+  status: EmployeeStatus;
+}
 
 export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
-  const u = mockCurrentUser;
+  const [user, setUser] = useState<EmployeeDB | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [assignedTasks, setAssignedTasks] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState(0);
+  const [activeProjects, setActiveProjects] = useState(0);
 
-  const myTasks = mockTasks.filter((t) => t.assigneeId === u.id).length;
-  const myProjects = mockProjects.filter((p) => p.teamIds.includes(u.id)).length;
+  const [formData, setFormData] = useState<EmployeeDB>({
+    id: "",
+    emp_name: "",
+    emp_email: "",
+    emp_phone: "",
+    avatarUrl: null,
+    department: "",
+    role: "",
+    status: "active",
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const updateProfile = async () => {
+    if (!user) return;
+
+    const { error } = await connectSupabase
+      .from("employee")
+      .update({
+        emp_name: formData.emp_name,
+        emp_email: formData.emp_email,
+        emp_phone: formData.emp_phone,
+        department: formData.department,
+        role: formData.role,
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to update profile");
+      return;
+    }
+
+    // Update local state immediately
+    setUser(formData);
+
+    // Close the modal
+    setEditOpen(false);
+
+    // Optional success message
+    toast.success("Profile updated successfully");
+
+    // Reload latest data from Supabase
+    fetchProfile();
+  };
+
+  const fetchStats = async (employeeName: string) => {
+
+
+    // Assigned Tasks
+    const { count: assigned } = await connectSupabase
+      .from("task")
+      .select("*", { count: "exact", head: true })
+      .eq("assignee", employeeName);
+
+    // Completed Tasks
+    const { count: completed } = await connectSupabase
+      .from("task")
+      .select("*", { count: "exact", head: true })
+      .eq("assignee", employeeName)
+      .eq("status", "completed");
+
+    // Get all project names for this employee
+    const { data: projects, error } = await connectSupabase
+      .from("task")
+      .select("project")
+      .eq("assignee", employeeName);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+
+
+    // Count unique project names
+    const uniqueProjects = new Set(
+      (projects ?? [])
+        .map((item) => item.project)
+        .filter(Boolean)
+    );
+
+    setAssignedTasks(assigned ?? 0);
+    setCompletedTasks(completed ?? 0);
+    setActiveProjects(uniqueProjects.size);
+
+    console.log("Employee Name:", employeeName);
+    console.log("Projects:", projects);
+    console.log("Error:", error);
+  };
+
+  const changePassword = async () => {
+    if (!passwordData.currentPassword) {
+      toast.error("Enter current password");
+      return;
+    }
+
+    if (!passwordData.newPassword) {
+      toast.error("Enter new password");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await connectSupabase.auth.getUser();
+
+    if (!user?.email) {
+      toast.error("User not found");
+      return;
+    }
+
+    // Verify current password
+    const { error: signInError } =
+      await connectSupabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordData.currentPassword,
+      });
+
+    if (signInError) {
+      toast.error("Current password is incorrect");
+      return;
+    }
+
+    // Update password
+    const { error } = await connectSupabase.auth.updateUser({
+      password: passwordData.newPassword,
+    });
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Password updated successfully");
+
+    setPasswordData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+
+    setPwOpen(false);
+  };
+
+  const fetchProfile = async () => {
+    setLoading(true);
+
+    const {
+      data: { user: authUser },
+    } = await connectSupabase.auth.getUser();
+
+    if (!authUser) return;
+
+    const { data, error } = await connectSupabase
+      .from("employee")
+      .select("*")
+      .eq("emp_email", authUser.email)
+      .single();
+
+    if (error) {
+      console.error(error);
+    } else {
+      setUser(data);
+
+      await fetchStats(data.emp_name);
+    }
+
+    setLoading(false);
+
+    setLoading(false);
+  };
+
+  if (loading) return null;
+
+  if (!user) {
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <h2 className="text-3xl font-bold text-foreground">
+            Profile not found
+          </h2>
+
+          <p className="mt-3 text-sm text-muted-foreground">
+            We couldn't find an employee profile associated with your account.
+            Please contact your administrator.
+          </p>
+
+          <Button
+            className="mt-6"
+            onClick={() => window.location.reload()}
+          >
+            Refresh
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -33,17 +264,26 @@ export function ProfilePage() {
         <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
-              <AvatarImage src={u.avatarUrl} alt={u.name} />
-              <AvatarFallback className="text-2xl">{initials(u.name)}</AvatarFallback>
+              <AvatarImage src={user?.avatarUrl ?? undefined} alt={user?.emp_name ?? ""} />
+              <AvatarFallback className="text-2xl">{initials(user?.emp_name ?? "")}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-bold text-foreground">{u.name}</h2>
-                <EmployeeStatusBadge status={u.status} />
+                <h2 className="text-xl font-bold text-foreground">{user?.emp_name}</h2>
+                {user && <EmployeeStatusBadge status={user.status} />}
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{u.role}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{user?.role}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => setEditOpen(true)} className="gap-1.5">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (user) {
+                      setFormData(user);
+                    }
+                    setEditOpen(true);
+                  }}
+                  className="gap-1.5"
+                >
                   <Pencil className="h-3.5 w-3.5" /> Edit profile
                 </Button>
                 <Button
@@ -59,23 +299,18 @@ export function ProfilePage() {
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-2">
-            <InfoRow icon={Mail} label="Email" value={u.email} />
-            <InfoRow icon={Phone} label="Phone" value={u.phone} />
-            <InfoRow icon={Building2} label="Department" value={u.department} />
-            <InfoRow icon={Briefcase} label="Role" value={u.role} />
+            <InfoRow icon={Mail} label="Email" value={user?.emp_email ?? ""} />
+            <InfoRow icon={Phone} label="Phone" value={user?.emp_phone ?? ""} />
+            <InfoRow icon={Building2} label="Department" value={user?.department ?? ""} />
+            <InfoRow icon={Briefcase} label="Role" value={user?.role ?? ""} />
           </div>
         </div>
 
         {/* Stats */}
         <div className="space-y-4">
-          <StatBlock label="Active projects" value={myProjects} />
-          <StatBlock label="Assigned tasks" value={myTasks} />
-          <StatBlock
-            label="Tasks completed"
-            value={
-              mockTasks.filter((t) => t.assigneeId === u.id && t.status === "completed").length
-            }
-          />
+          <StatBlock label="Active projects" value={activeProjects} />
+          <StatBlock label="Assigned tasks" value={assignedTasks} />
+          <StatBlock label="Tasks completed" value={completedTasks} />
         </div>
       </div>
 
@@ -88,7 +323,7 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setEditOpen(false)}>Save changes</Button>
+            <Button onClick={updateProfile}>Save changes</Button>
           </>
         }
       >
@@ -98,23 +333,73 @@ export function ProfilePage() {
         >
           <div className="sm:col-span-2">
             <Label htmlFor="pr-name">Full name</Label>
-            <Input id="pr-name" defaultValue={u.name} className="mt-1.5" />
+            <Input
+              id="pr-name"
+              value={formData.emp_name}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  emp_name: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label htmlFor="pr-email">Email</Label>
-            <Input id="pr-email" defaultValue={u.email} className="mt-1.5" />
+            <Input
+              id="pr-email"
+              value={formData.emp_email}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  emp_email: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label htmlFor="pr-phone">Phone</Label>
-            <Input id="pr-phone" defaultValue={u.phone} className="mt-1.5" />
+            <Input
+              id="pr-phone"
+              value={formData.emp_phone}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  emp_phone: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label htmlFor="pr-dept">Department</Label>
-            <Input id="pr-dept" defaultValue={u.department} className="mt-1.5" />
+            <Input
+              id="pr-dept"
+              value={formData.department}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  department: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label htmlFor="pr-role">Role</Label>
-            <Input id="pr-role" defaultValue={u.role} className="mt-1.5" />
+            <Input
+              id="pr-role"
+              value={formData.role}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  role: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
         </form>
       </Modal>
@@ -128,22 +413,55 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setPwOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setPwOpen(false)}>Update password</Button>
+            <Button onClick={changePassword}>Update password</Button>
           </>
         }
       >
         <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
           <div>
             <Label htmlFor="pw-current">Current password</Label>
-            <Input id="pw-current" type="password" className="mt-1.5" />
+            <Input
+              id="pw-current"
+              type="password"
+              value={passwordData.currentPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  currentPassword: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label htmlFor="pw-new">New password</Label>
-            <Input id="pw-new" type="password" className="mt-1.5" />
+            <Input
+              id="pw-new"
+              type="password"
+              value={passwordData.newPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  newPassword: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label htmlFor="pw-confirm">Confirm new password</Label>
-            <Input id="pw-confirm" type="password" className="mt-1.5" />
+            <Input
+              id="pw-confirm"
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  confirmPassword: e.target.value,
+                })
+              }
+              className="mt-1.5"
+            />
           </div>
         </form>
       </Modal>
