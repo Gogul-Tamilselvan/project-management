@@ -165,3 +165,30 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+body.compact-mode .space-y-6 {
+  gap: 0.75rem;
+}
+
+body.compact-mode .p-6 {
+  padding: 1rem;
+}
+
+body.compact-mode .px-6 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+body.compact-mode .py-4 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
