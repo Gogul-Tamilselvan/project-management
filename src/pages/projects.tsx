@@ -17,7 +17,6 @@ import { EmptyState } from "@/components/ui-kit/empty-state";
 import type { ProjectStatus, Project } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 
-
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
   { label: "In progress", value: "in_progress" },
@@ -25,8 +24,6 @@ const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "On hold", value: "on_hold" },
   { label: "Completed", value: "completed" },
 ];
-
-
 
 export function ProjectsPage() {
   const [open, setOpen] = useState(false);
@@ -36,16 +33,12 @@ export function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
 
-
   useEffect(() => {
     getProjects();
   }, []);
 
   const handleDelete = async (project: Project) => {
-    const { error } = await connectSupabase
-      .from("projects")
-      .delete()
-      .eq("id", project.id);
+    const { error } = await connectSupabase.from("projects").delete().eq("id", project.id);
 
     if (error) {
       console.error(error);
@@ -95,7 +88,7 @@ export function ProjectsPage() {
   const visible = projects.filter(
     (p) =>
       (status === "all" || p.status === status) &&
-      (query === "" || p.name.toLowerCase().includes(query.toLowerCase()))
+      (query === "" || p.name.toLowerCase().includes(query.toLowerCase())),
   );
 
   return (
@@ -107,11 +100,14 @@ export function ProjectsPage() {
             Plan, track, and ship every initiative across your workspace.
           </p>
         </div>
-        <Button className="gap-1.5" onClick={() => {
-          setEditingProject(null);
-          setMode("create");
-          setOpen(true);
-        }}>
+        <Button
+          className="gap-1.5"
+          onClick={() => {
+            setEditingProject(null);
+            setMode("create");
+            setOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" /> Create project
         </Button>
       </div>
@@ -156,18 +152,28 @@ export function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((p) => (
-            <ProjectCard key={p.id} project={p} onEdit={handleEdit} onDelete={handleDelete} onView={handleView} />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={handleView}
+            />
           ))}
         </div>
       )}
 
-      <CreateProjectModal open={open} onOpenChange={setOpen} onCreate={getProjects} editingProject={editingProject} mode={mode} resetModal={() => {
-        setEditingProject(null);
-        setMode("create");
-      }} />
-
-
-
+      <CreateProjectModal
+        open={open}
+        onOpenChange={setOpen}
+        onCreate={getProjects}
+        editingProject={editingProject}
+        mode={mode}
+        resetModal={() => {
+          setEditingProject(null);
+          setMode("create");
+        }}
+      />
     </div>
   );
 }
@@ -187,7 +193,6 @@ function CreateProjectModal({
   editingProject: Project | null;
   mode: "create" | "edit" | "view";
 }) {
-
   interface ProjectFormData {
     id: string;
     name: string;
@@ -231,14 +236,12 @@ function CreateProjectModal({
         progress: 0,
         startDate: "",
         dueDate: "",
-        teamIds: []
+        teamIds: [],
       });
     }
   }, [editingProject]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -273,15 +276,13 @@ function CreateProjectModal({
         data: { user },
       } = await connectSupabase.auth.getUser();
 
-      const { error } = await connectSupabase
-        .from("projects")
-        .insert({
-          project_name: formData.name,
-          description: formData.description,
-          status: formData.status,
-          start_date: formData.startDate,
-          end_date: formData.dueDate,
-        });
+      const { error } = await connectSupabase.from("projects").insert({
+        project_name: formData.name,
+        description: formData.description,
+        status: formData.status,
+        start_date: formData.startDate,
+        end_date: formData.dueDate,
+      });
 
       if (error) {
         console.error("Insert Error:", error);
@@ -310,7 +311,6 @@ function CreateProjectModal({
     onOpenChange(false);
   };
 
-
   return (
     <Modal
       open={open}
@@ -336,23 +336,28 @@ function CreateProjectModal({
       }
       footer={
         <>
-          <Button variant="ghost" onClick={() => {
-            resetModal();
-            onOpenChange(false);
-          }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              resetModal();
+              onOpenChange(false);
+            }}
+          >
             {mode === "view" ? "Close" : "Cancel"}
           </Button>
           {mode !== "view" && (
             <Button type="submit" form="project-form">
-              {mode === "create"
-                ? "Create Project"
-                : "Update Project"}
+              {mode === "create" ? "Create Project" : "Update Project"}
             </Button>
           )}
         </>
       }
     >
-      <form id="project-form" className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+      <form
+        id="project-form"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        onSubmit={handleSubmit}
+      >
         <div className="sm:col-span-2">
           <Label htmlFor="p-name">Project name</Label>
           <Input

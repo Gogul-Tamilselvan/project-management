@@ -40,6 +40,7 @@ import { initials } from "@/lib/format";
 import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
+import { getTasks } from "@/lib/data";
 
 interface EmployeDB {
   id: string;
@@ -56,25 +57,24 @@ export function EmployeesPage() {
   const [open, setOpen] = useState<boolean>(false);
   const [editopen, seteditopen] = useState<boolean>(false);
   const [profile, setprofile] = useState<boolean>(false);
-  const [proDetails, setproDetails] = useState<EmployeDB>();
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeDB | null>(null);
+  const [proDetails, setproDetails] = useState<Employee>();
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [query, setQuery] = useState<string>("");
-  const [data, setData] = useState<EmployeDB[]>();
+  const [data, setData] = useState<Employee[]>();
   const visible = data?.filter((e) =>
-    (e.emp_name + e.emp_email + e.department).toLowerCase().includes(query.toLowerCase()),
+    (e.name + e.email + e.department).toLowerCase().includes(query.toLowerCase()),
   );
   const deleteemploye = async (id: string) => {
     const { error } = await connectSupabase.from("employee").delete().eq("id", id);
     if (error) {
       toast.error("delete error" + error);
-      // console.log("delete error", error);
       return;
     } else toast.success("deleted successfully");
+    getEmployes();
   };
   const getEmployes = async () => {
     const { data, error: err } = await connectSupabase.from("employee").select();
     if (err) {
-      console.log(err);
       toast.error(err.message);
     } else {
       setData(data);
@@ -83,28 +83,7 @@ export function EmployeesPage() {
 
   useEffect(() => {
     getEmployes();
-  }, []);
-
-  useEffect(() => {
-    const channel = connectSupabase
-      .channel("employee-channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "employee",
-        },
-        () => {
-          getEmployes();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      connectSupabase.removeChannel(channel);
-    };
-  }, []);
+  }, [open, editopen, profile]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -156,12 +135,19 @@ export function EmployeesPage() {
                     <TableCell className="pl-6 py-3.5">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                          <AvatarImage src={e.avatarUrl} alt={e.emp_name} />
-                          <AvatarFallback>{initials(e.emp_name)}</AvatarFallback>
+                          <AvatarImage
+                            src={
+                              connectSupabase.storage
+                                .from("Employee")
+                                .getPublicUrl(e?.avatarUrl ?? "").data.publicUrl
+                            }
+                            alt={e.name}
+                          />
+                          <AvatarFallback>{initials(e.name)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <div className="font-medium text-foreground">{e.emp_name}</div>
-                          <div className="text-xs text-muted-foreground">{e.emp_email}</div>
+                          <div className="font-medium text-foreground">{e.name}</div>
+                          <div className="text-xs text-muted-foreground">{e.email}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -221,14 +207,12 @@ export function EmployeesPage() {
         {/* <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2"> */}
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
-            <AvatarImage src={proDetails?.avatarUrl} alt={proDetails?.emp_name} />
-            <AvatarFallback className="text-2xl">
-              {initials(proDetails?.emp_name ?? "")}
-            </AvatarFallback>
+            <AvatarImage src={proDetails?.avatarUrl} alt={proDetails?.name} />
+            <AvatarFallback className="text-2xl">{initials(proDetails?.name ?? "")}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-xl font-bold text-foreground">{proDetails?.emp_name}</h2>
+              <h2 className="text-xl font-bold text-foreground">{proDetails?.name}</h2>
               <EmployeeStatusBadge status={proDetails?.status ?? "active"} />
             </div>
             <p className="mt-1 text-sm text-muted-foreground capitalize">{proDetails?.role}</p>
@@ -236,15 +220,20 @@ export function EmployeesPage() {
         </div>
         {proDetails && (
           <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-2">
-            <InfoRow icon={Mail} label="Email" value={proDetails?.emp_email} />
-            <InfoRow icon={Phone} label="Phone" value={proDetails?.emp_phone} />
+            <InfoRow icon={Mail} label="Email" value={proDetails?.email} />
+            <InfoRow icon={Phone} label="Phone" value={proDetails?.phone} />
             <InfoRow icon={Building2} label="Department" value={proDetails?.department} />
             <InfoRow icon={Briefcase} label="Role" value={proDetails?.role} />
           </div>
         )}
       </Modal>
       <AddEmployeeModal open={open} onOpenChange={setOpen} />
-      <EditEmployeeModal editopen={editopen} seteditopen={seteditopen} employe={selectedEmployee} />
+
+      <EditEmployeeModal
+        editopen={editopen}
+        seteditopen={seteditopen}
+        employee={selectedEmployee}
+      />
     </div>
   );
 }
@@ -252,11 +241,11 @@ export function EmployeesPage() {
 function EditEmployeeModal({
   editopen,
   seteditopen,
-  employe,
+  employee,
 }: {
   editopen: boolean;
   seteditopen: (v: boolean) => void;
-  employe: EmployeDB | null;
+  employee: Employee | null;
 }) {
   const [updatedata, setupdatedata] = useState<Employee>({
     id: "",
@@ -266,24 +255,24 @@ function EditEmployeeModal({
     avatarUrl: "",
     department: "",
     role: "",
-    status: "active",
+    status: "" as EmployeeStatus,
   });
   const [updateimage, setupdateimage] = useState<File | null>(null);
 
   useEffect(() => {
-    if (employe) {
+    if (employee) {
       setupdatedata({
-        id: employe.id,
-        name: employe.emp_name,
-        email: employe.emp_email,
-        phone: employe.emp_phone,
-        avatarUrl: employe.avatarUrl || "",
-        department: employe.department,
-        role: employe.role,
-        status: employe.status,
+        id: employee.id,
+        name: employee.name,
+        email: employee.email,
+        phone: employee.phone,
+        avatarUrl: employee.avatarUrl || "",
+        department: employee.department,
+        role: employee.role,
+        status: employee.status,
       });
     }
-  }, [employe]);
+  }, [employee]);
 
   const updatedetails = async () => {
     try {
@@ -292,46 +281,49 @@ function EditEmployeeModal({
         return;
       }
 
-      let imgurl = updatedata.avatarUrl;
+      let avatarPath = updatedata.avatarUrl;
 
       if (updateimage) {
-        const filename = `${Date.now()}-${updateimage.name}`;
+        if (updatedata.avatarUrl) {
+          const { error: deleteError } = await connectSupabase.storage
+            .from("Employee")
+            .remove([updatedata.avatarUrl]);
+        }
 
-        const filepath = `avatarUrl/${filename}`;
+        const fileName = `${Date.now()}-${updateimage.name}`;
+        const filePath = `Emp_image/${fileName}`;
 
-        const { error: imageerror } = await connectSupabase.storage
-          .from("Employe")
-          .upload(filepath, updateimage);
+        const { error: uploadError } = await connectSupabase.storage
+          .from("Employee")
+          .upload(filePath, updateimage);
 
-        if (imageerror) {
-          toast.error(imageerror.message);
+        if (uploadError) {
+          toast.error(uploadError.message);
           return;
         }
 
-        const { data: urlData } = connectSupabase.storage.from("Employe").getPublicUrl(filepath);
-
-        imgurl = urlData.publicUrl;
+        avatarPath = filePath;
       }
 
-      const { data, error } = await connectSupabase
+      const { error } = await connectSupabase
         .from("employee")
         .update({
-          emp_name: updatedata.name,
-          emp_email: updatedata.email,
-          emp_phone: updatedata.phone,
-          avatarUrl: imgurl,
+          name: updatedata.name,
+          email: updatedata.email,
+          phone: updatedata.phone,
+          avatarUrl: avatarPath,
           department: updatedata.department,
           role: updatedata.role,
           status: updatedata.status,
         })
-        .eq("id", updatedata.id)
-        .select();
+        .eq("id", updatedata.id);
 
       if (error) {
         toast.error(error.message);
         return;
       }
-      toast.success("Updated Successfully");
+
+      toast.success("Employee updated successfully!");
       seteditopen(false);
     } catch (error) {
       toast.error((error as Error).message);
@@ -362,7 +354,12 @@ function EditEmployeeModal({
       >
         <div className="sm:col-span-2 flex items-center gap-4">
           <div className="grid h-16 w-16 place-items-center rounded-full border border-dashed border-border bg-muted text-muted-foreground">
-            <Upload className="h-5 w-5" />
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={updatedata.avatarUrl} />
+              <AvatarFallback>{initials(updatedata.name)}</AvatarFallback>
+            </Avatar>
+
+            {/* <Upload className="h-5 w-5" values={updatedata.avatarUrl} /> */}
           </div>
           <div>
             <Input
@@ -470,14 +467,14 @@ function AddEmployeeModal({
   onOpenChange: (v: boolean) => void;
 }) {
   const [formData, setFormData] = useState<Employee>({
-    id: `emp_`,
+    id: "",
     name: "",
     email: "",
     phone: "",
     avatarUrl: "",
     department: "",
     role: "",
-    status: "active",
+    status: "" as EmployeeStatus,
   });
 
   const [image, setimage] = useState<File | null>();
@@ -493,44 +490,38 @@ function AddEmployeeModal({
       const filePath = `Emp_image/${fileName}`;
 
       const { error: uploadError } = await connectSupabase.storage
-        .from("Employe")
+        .from("Employee")
         .upload(filePath, image);
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = connectSupabase.storage.from("Employe").getPublicUrl(filePath);
+      const { error } = await connectSupabase.from("employee").insert({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        avatarUrl: filePath,
+        department: formData.department,
+        role: formData.role,
+        status: formData.status,
+      });
 
-      const imageUrl = urlData.publicUrl;
+      if (error) throw error;
 
-      if (
-        formData.name.trim() !== "" &&
-        formData.email.trim() !== "" &&
-        formData.phone.trim() !== "" &&
-        formData.department.trim() !== "" &&
-        formData.role.trim() !== ""
-      ) {
-        const { data, error } = await connectSupabase
-          .from("employee")
-          .insert([
-            {
-              emp_name: formData.name,
-              emp_email: formData.email,
-              emp_phone: formData.phone,
-              avatarUrl: imageUrl,
-              department: formData.department,
-              role: formData.role,
-              status: formData.status,
-            },
-          ])
-          .select();
-        if (error) {
-          toast.error(error.message);
-        } else toast.success("Employee added!");
-        onOpenChange(false);
-      }
+      toast.success("Employee added!");
+      onOpenChange(false);
     } catch (error) {
       toast.error((error as Error).message);
     }
+
+    setFormData({
+      id: "",
+      department: "",
+      email: "",
+      name: "",
+      phone: "",
+      role: "",
+      status: "" as EmployeeStatus,
+    });
   };
 
   return (

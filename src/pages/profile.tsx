@@ -48,7 +48,6 @@ export function ProfilePage() {
     confirmPassword: "",
   });
 
-
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -87,8 +86,6 @@ export function ProfilePage() {
   };
 
   const fetchStats = async (employeeName: string) => {
-
-
     // Assigned Tasks
     const { count: assigned } = await connectSupabase
       .from("task")
@@ -113,14 +110,8 @@ export function ProfilePage() {
       return;
     }
 
-
-
     // Count unique project names
-    const uniqueProjects = new Set(
-      (projects ?? [])
-        .map((item) => item.project)
-        .filter(Boolean)
-    );
+    const uniqueProjects = new Set((projects ?? []).map((item) => item.project).filter(Boolean));
 
     setAssignedTasks(assigned ?? 0);
     setCompletedTasks(completed ?? 0);
@@ -162,11 +153,10 @@ export function ProfilePage() {
     }
 
     // Verify current password
-    const { error: signInError } =
-      await connectSupabase.auth.signInWithPassword({
-        email: user.email,
-        password: passwordData.currentPassword,
-      });
+    const { error: signInError } = await connectSupabase.auth.signInWithPassword({
+      email: user.email,
+      password: passwordData.currentPassword,
+    });
 
     if (signInError) {
       toast.error("Current password is incorrect");
@@ -228,27 +218,20 @@ export function ProfilePage() {
     return (
       <div className="flex min-h-[80vh] items-center justify-center px-4">
         <div className="max-w-md text-center">
-          <h2 className="text-3xl font-bold text-foreground">
-            Profile not found
-          </h2>
+          <h2 className="text-3xl font-bold text-foreground">Profile not found</h2>
 
           <p className="mt-3 text-sm text-muted-foreground">
-            We couldn't find an employee profile associated with your account.
-            Please contact your administrator.
+            We couldn't find an employee profile associated with your account. Please contact your
+            administrator.
           </p>
 
-          <Button
-            className="mt-6"
-            onClick={() => window.location.reload()}
-          >
+          <Button className="mt-6" onClick={() => window.location.reload()}>
             Refresh
           </Button>
         </div>
       </div>
     );
   }
-
-
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">

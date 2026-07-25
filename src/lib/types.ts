@@ -37,11 +37,7 @@ export interface Task {
 }
 
 export type ActivityKind =
-  | "project_created"
-  | "task_assigned"
-  | "employee_added"
-  | "task_completed"
-  | "project_updated";
+  "project_created" | "task_assigned" | "employee_added" | "task_completed" | "project_updated";
 
 export interface Activity {
   id: string;

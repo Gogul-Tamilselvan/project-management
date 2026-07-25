@@ -16,6 +16,7 @@ import { initials, relativeTime } from "@/lib/format";
 import { mockActivities } from "@/lib/mock/activities";
 import { connectSupabase } from "@/services/config";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface NavbarProps {
   onOpenMobileNav: () => void;
@@ -45,7 +46,7 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
   const logout = async () => {
     const { error } = await connectSupabase.auth.signOut();
     if (error) {
-      console.log(error);
+      toast.error(error.message);
     }
 
     setTimeout(() => {

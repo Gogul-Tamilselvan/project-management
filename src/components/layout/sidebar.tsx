@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { mockCurrentUser } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
+import { toast } from "sonner";
 
 const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -43,7 +44,7 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
   const logout = async () => {
     const { error } = await connectSupabase.auth.signOut();
     if (error) {
-      console.log(error);
+      toast.error(error);
     }
 
     setTimeout(() => {

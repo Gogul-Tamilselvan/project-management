@@ -34,11 +34,22 @@ import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
 
 interface empName {
-  emp_name: string;
-  avatarUrl: string;
+  id: string;
+  name: string;
 }
 interface proTitle {
+  id: string;
   project_name: string;
+}
+
+interface TaskDetail extends Task {
+  projects: {
+    project_name: string;
+  };
+  employee: {
+    name: string;
+    avatarUrl: string;
+  };
 }
 const statusLabels = {
   todo: "Todo",
@@ -57,16 +68,18 @@ export function TasksPage() {
   const [open, setOpen] = useState<boolean>(false);
   const [viewTask, setViewTask] = useState<boolean>(false);
   const [editTask, setEditTask] = useState<boolean>(false);
-  const [taskdetail, settaskdetail] = useState<taskType>();
+  const [taskdetail, settaskdetail] = useState<TaskDetail>();
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<Priority | "all">("all");
   const [status, setStatus] = useState<TaskStatus | "all">("all");
   const [project, setProject] = useState<proTitle[]>([]);
   const [empName, setEmpName] = useState<empName[]>([]);
-  const [task, settask] = useState<taskType[]>([]);
+  const [task, settask] = useState<TaskDetail[]>([]);
 
   const getTasks = async () => {
-    const { data, error } = await connectSupabase.from("task").select("*");
+    const { data, error } = await connectSupabase
+      .from("task")
+      .select("*,projects(project_name),employee(name,avatarUrl)");
     if (error) {
       toast.error(error.message);
     } else {
@@ -75,60 +88,38 @@ export function TasksPage() {
   };
 
   const getEmployeName = async () => {
-    const { data, error } = await connectSupabase.from("employee").select("avatarUrl,emp_name");
+    const { data, error } = await connectSupabase.from("employee").select("name,id");
     if (error) {
       toast.error(error.message);
     } else {
       setEmpName(data);
     }
-
     getTasks();
   };
 
   const getProjectTitle = async () => {
-    const { data, error } = await connectSupabase.from("projects").select("project_name");
+    const { data, error } = await connectSupabase.from("projects").select("project_name,id");
     if (error) {
       toast.error(error.message);
     } else {
       setProject(data);
     }
-
     getTasks();
   };
 
-  const dropTask = async (id: number) => {
+  const dropTask = async (id: string) => {
     const { error } = await connectSupabase.from("task").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
     } else toast.success("Deleted successfully!");
+    getTasks();
   };
 
   useEffect(() => {
     getEmployeName();
     getProjectTitle();
     getTasks();
-  }, []);
-
-  useEffect(() => {
-    const channel = connectSupabase
-      .channel("task-channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "task",
-        },
-        () => {
-          getTasks();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      connectSupabase.removeChannel(channel);
-    };
-  }, []);
+  }, [open, viewTask, editTask]);
 
   const visible = task?.filter(
     (t) =>
@@ -218,16 +209,25 @@ export function TasksPage() {
                       <TableCell className="pl-6 py-3.5">
                         <div className="font-medium text-foreground">{t.title}</div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{t.project}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {t?.projects?.project_name}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-7 w-7">
-                            <AvatarImage src={t?.emp_image} alt={t.assignee} />
+                            <AvatarImage
+                              src={
+                                connectSupabase.storage
+                                  .from("Employee")
+                                  .getPublicUrl(t?.employee?.avatarUrl).data.publicUrl
+                              }
+                              alt={t?.employee?.name}
+                            />
                             <AvatarFallback className="text-[10px]">
-                              {initials(t.assignee ?? "")}
+                              {initials(t.assigneeId ?? "")}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm text-foreground">{t.assignee}</span>
+                          <span className="text-sm text-foreground">{t.employee.name}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -239,7 +239,7 @@ export function TasksPage() {
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                           <CalendarDays className="h-3.5 w-3.5" />
-                          {formatShortDate(t.duedate)}
+                          {formatShortDate(t.dueDate)}
                         </span>
                       </TableCell>
                       <TableCell className="pr-6 text-right">
@@ -305,18 +305,6 @@ export function TasksPage() {
   );
 }
 
-interface taskType {
-  id: number;
-  title: string;
-  description?: string;
-  project: string;
-  assignee: string;
-  priority: Priority;
-  status: TaskStatus;
-  duedate: string;
-  emp_image: string;
-}
-
 function CreateTaskModal({
   open,
   onOpenChange,
@@ -328,34 +316,32 @@ function CreateTaskModal({
   empName: empName[];
   projectTitle: proTitle[];
 }) {
-  const [projectDetail, setprojectDetail] = useState<taskType>({
-    id: 0,
+  const [projectDetail, setprojectDetail] = useState<Task>({
+    id: "",
     title: "",
     description: "",
-    project: "",
-    assignee: "",
+    projectId: "",
+    assigneeId: "",
     priority: "low",
     status: "in_progress",
-    duedate: "",
-    emp_image: "",
+    dueDate: "",
   });
 
   const addTask = async () => {
     if (
       projectDetail.title != "" &&
       projectDetail.description != "" &&
-      projectDetail.duedate != "" &&
-      projectDetail.assignee != ""
+      projectDetail.dueDate != "" &&
+      projectDetail.assigneeId != ""
     ) {
-      const { data, error } = await connectSupabase.from("task").insert({
+      const { error } = await connectSupabase.from("task").insert({
         title: projectDetail.title,
         description: projectDetail.description,
-        project: projectDetail.project,
-        assignee: projectDetail.assignee,
-        duedate: projectDetail.duedate,
+        projectId: projectDetail.projectId,
+        assigneeId: projectDetail.assigneeId,
+        dueDate: projectDetail.dueDate,
         priority: projectDetail.priority,
         status: projectDetail.status,
-        emp_image: projectDetail.emp_image,
       });
 
       if (error) {
@@ -364,6 +350,17 @@ function CreateTaskModal({
         onOpenChange(false);
         toast.success("Task created");
       }
+
+      setprojectDetail({
+        assigneeId: "",
+        dueDate: "",
+        id: "",
+        priority: "" as Priority,
+        projectId: "",
+        status: "" as TaskStatus,
+        title: "",
+        description: "",
+      });
     }
   };
 
@@ -395,6 +392,7 @@ function CreateTaskModal({
             id="t-name"
             placeholder="What needs to get done?"
             className="mt-1.5"
+            value={projectDetail.title}
             required
             onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
           />
@@ -403,6 +401,7 @@ function CreateTaskModal({
           <Label htmlFor="t-desc">Description</Label>
           <Textarea
             id="t-desc"
+            value={projectDetail.description}
             required
             rows={3}
             className="mt-1.5"
@@ -412,15 +411,16 @@ function CreateTaskModal({
         <div>
           <Label>Project</Label>
           <Select
+            value={projectDetail.projectId}
             required
-            onValueChange={(val) => setprojectDetail((prev) => ({ ...prev, project: val }))}
+            onValueChange={(val) => setprojectDetail((prev) => ({ ...prev, projectId: val }))}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
               {projectTitle?.map((p, idx: number) => (
-                <SelectItem key={idx} value={p.project_name}>
+                <SelectItem key={idx} value={p.id}>
                   {p.project_name}
                 </SelectItem>
               ))}
@@ -430,15 +430,10 @@ function CreateTaskModal({
         <div>
           <Label>Assignee</Label>
           <Select
+            value={projectDetail.assigneeId}
             required
             onValueChange={(val) => {
-              const employee = JSON.parse(val);
-
-              setprojectDetail((prev) => ({
-                ...prev,
-                assignee: employee.emp_name,
-                emp_image: employee.avatarUrl,
-              }));
+              setprojectDetail((prev) => ({ ...prev, assigneeId: val }));
             }}
           >
             <SelectTrigger className="mt-1.5">
@@ -447,14 +442,8 @@ function CreateTaskModal({
 
             <SelectContent>
               {empName?.map((e, idx: number) => (
-                <SelectItem
-                  key={idx}
-                  value={JSON.stringify({
-                    emp_name: e.emp_name,
-                    avatarUrl: e.avatarUrl,
-                  })}
-                >
-                  {e.emp_name}
+                <SelectItem key={idx} value={e.id}>
+                  {e.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -464,7 +453,8 @@ function CreateTaskModal({
           <Label>Priority</Label>
           <Select
             required
-            defaultValue="medium"
+            value={projectDetail.priority}
+            defaultValue="low"
             onValueChange={(val: Priority) =>
               setprojectDetail((prev) => ({ ...prev, priority: val }))
             }
@@ -486,8 +476,9 @@ function CreateTaskModal({
             id="t-due"
             required
             type="date"
+            value={projectDetail.dueDate}
             className="mt-1.5"
-            onChange={(e) => setprojectDetail((prev) => ({ ...prev, duedate: e.target.value }))}
+            onChange={(e) => setprojectDetail((prev) => ({ ...prev, dueDate: e.target.value }))}
           />
         </div>
       </form>
@@ -502,7 +493,7 @@ function ViewTask({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  value: taskType;
+  value: TaskDetail;
 }) {
   return (
     <Modal
@@ -542,7 +533,7 @@ function ViewTask({
             className="mt-1.5"
             required
             readOnly
-            defaultValue={value?.project}
+            defaultValue={value?.projects?.project_name}
           />
         </div>
         <div>
@@ -553,7 +544,7 @@ function ViewTask({
             className="mt-1.5"
             required
             readOnly
-            defaultValue={value?.assignee}
+            defaultValue={value?.employee?.name}
           />
         </div>
         <div>
@@ -586,7 +577,7 @@ function ViewTask({
             type="date"
             readOnly
             className="mt-1.5"
-            defaultValue={value?.duedate}
+            defaultValue={value?.dueDate}
           />
         </div>
       </form>
@@ -603,34 +594,34 @@ function EditTask({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  value: taskType;
+  value: TaskDetail;
   empName: empName[];
   project: proTitle[];
 }) {
-  const [editTask, setEditTask] = useState<taskType>({
+  const [editTask, setEditTask] = useState<Task>({
     id: value?.id,
     title: value?.title,
     description: value?.description,
-    project: value?.project,
-    assignee: value?.assignee,
+    projectId: value?.projectId,
+    assigneeId: value?.assigneeId,
     priority: value?.priority,
     status: value?.status,
-    duedate: value?.duedate,
-    emp_image: value?.emp_image,
+    dueDate: value?.dueDate,
+    // emp_image: value?.emp_image,
   });
 
-  const editTaskfun = async (id: number) => {
+  const editTaskfun = async (id: string) => {
     const { error } = await connectSupabase
       .from("task")
       .update({
         title: editTask.title,
         description: editTask.description,
-        project: editTask.project,
-        assignee: editTask.assignee,
-        duedate: editTask.duedate,
+        projectId: editTask.projectId,
+        assigneeId: editTask.assigneeId,
+        dueDate: editTask.dueDate,
         priority: editTask.priority,
         status: editTask.status,
-        emp_image: editTask.emp_image,
+        // emp_image: editTask.emp_image,
       })
       .eq("id", id);
 
@@ -690,15 +681,15 @@ function EditTask({
           <Label>Project</Label>
           <Select
             required
-            defaultValue={value?.project}
-            onValueChange={(val) => setEditTask((prev) => ({ ...prev, project: val }))}
+            defaultValue={value?.projectId}
+            onValueChange={(val) => setEditTask((prev) => ({ ...prev, projectId: val }))}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
               {project?.map((p, idx: number) => (
-                <SelectItem key={idx} value={p.project_name}>
+                <SelectItem key={idx} value={p.id}>
                   {p.project_name}
                 </SelectItem>
               ))}
@@ -708,18 +699,8 @@ function EditTask({
         <div>
           <Label>Assignee</Label>
           <Select
-            defaultValue={JSON.stringify({
-              emp_name: value.assignee,
-              avatarUrl: value.emp_image,
-            })}
-            onValueChange={(val) => {
-              const employee = JSON.parse(val);
-              setEditTask((prev) => ({
-                ...prev,
-                assignee: employee.emp_name,
-                emp_image: employee.avatarUrl,
-              }));
-            }}
+            defaultValue={value?.assigneeId}
+            onValueChange={(val) => setEditTask((prev) => ({ ...prev, assigneeId: val }))}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select employee" />
@@ -727,14 +708,8 @@ function EditTask({
 
             <SelectContent>
               {empName?.map((e, idx: number) => (
-                <SelectItem
-                  key={idx}
-                  value={JSON.stringify({
-                    emp_name: e.emp_name,
-                    avatarUrl: e.avatarUrl,
-                  })}
-                >
-                  {e.emp_name}
+                <SelectItem key={idx} value={e.id}>
+                  {e.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -784,7 +759,7 @@ function EditTask({
             type="date"
 
             className="mt-1.5"
-            defaultValue={value?.duedate}
+            defaultValue={value?.dueDate}
             onChange={(e) => setEditTask((prev) => ({ ...prev, dueDate: e.target.value }))}
           />
         </div>
