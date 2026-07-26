@@ -85,42 +85,23 @@ export function ProfilePage() {
     fetchProfile();
   };
 
-  const fetchStats = async (employeeName: string) => {
-    // Assigned Tasks
-    const { count: assigned } = await connectSupabase
-      .from("task")
-      .select("*", { count: "exact", head: true })
-      .eq("assignee", employeeName);
+  const fetchStats = async (employeeId: string) => {
+  const { data, error } = await connectSupabase.rpc(
+    "get_employee_stats",
+    { emp_id: employeeId }
+  );
 
-    // Completed Tasks
-    const { count: completed } = await connectSupabase
-      .from("task")
-      .select("*", { count: "exact", head: true })
-      .eq("assignee", employeeName)
-      .eq("status", "completed");
+  if (error) {
+    console.error(error);
+    return;
+  }
 
-    // Get all project names for this employee
-    const { data: projects, error } = await connectSupabase
-      .from("task")
-      .select("project")
-      .eq("assignee", employeeName);
+  const stats = data[0];
 
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    // Count unique project names
-    const uniqueProjects = new Set((projects ?? []).map((item) => item.project).filter(Boolean));
-
-    setAssignedTasks(assigned ?? 0);
-    setCompletedTasks(completed ?? 0);
-    setActiveProjects(uniqueProjects.size);
-
-    console.log("Employee Name:", employeeName);
-    console.log("Projects:", projects);
-    console.log("Error:", error);
-  };
+  setAssignedTasks(Number(stats.assigned_tasks));
+  setCompletedTasks(Number(stats.completed_tasks));
+  setActiveProjects(Number(stats.active_projects));
+};
 
   const changePassword = async () => {
     if (!passwordData.currentPassword) {
@@ -204,10 +185,8 @@ export function ProfilePage() {
     } else {
       setUser(data);
 
-      await fetchStats(data.emp_name);
+      await fetchStats(data.id);
     }
-
-    setLoading(false);
 
     setLoading(false);
   };
