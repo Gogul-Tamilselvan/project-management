@@ -10,6 +10,7 @@ import { SignupPage } from "./pages/signup";
 import { SigninPage } from "./pages/signin";
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
+import { connectSupabase } from "@/services/config";
 
 function NotFoundPage() {
   return (
@@ -34,34 +35,63 @@ function NotFoundPage() {
 }
 
 export function App() {
-  const [logged, setlogged] = useState<boolean>(true);
+  const [logged, setLogged] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const userLogged = localStorage.getItem(`userLogged`);
-    if (userLogged) {
-      setlogged(true);
-    }
+    const checkSession = async () => {
+      const { data } = await connectSupabase.auth.getSession();
+
+      setLogged(!!data.session);
+    };
+
+    checkSession();
+
+    const {
+      data: { subscription },
+    } = connectSupabase.auth.onAuthStateChange((_event, session) => {
+      setLogged(!!session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  if (logged === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <>
       <Toaster position="top-right" />
       <Routes>
         <Route path="/" element={<Navigate to="/signin" replace />} />
+        <Route
+          path="/signin"
+          element={
+            logged ? <Navigate to="/dashboard" replace /> : <SigninPage />
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            logged ? <Navigate to="/dashboard" replace /> : <SignupPage />
+          }
+        />
 
-        <Route path="/signin" element={<SigninPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        <Route element={
+          logged ? <AppShell /> : <Navigate to="/signin" replace />
+        }>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
 
-        {logged && (
-          <Route element={<AppShell />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="employees" element={<EmployeesPage />} />
-            <Route path="tasks" element={<TasksPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-        )}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
