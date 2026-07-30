@@ -56,9 +56,11 @@ export function SigninPage() {
       password: "",
     }));
     toast.success("Sign in successful.");
+    
     setTimeout(() => {
       navigate("/dashboard");
-    }, 500);
+    }, 2500);
+
   };
 
   return (

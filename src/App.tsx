@@ -77,7 +77,7 @@ export function App() {
         <Route
           path="/signup"
           element={
-            logged ? <Navigate to="/dashboard" replace /> : <SignupPage />
+            logged ? <Navigate to="/signin" replace /> : <SignupPage />
           }
         />
 
