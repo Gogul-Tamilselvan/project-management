@@ -32,21 +32,29 @@ export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
-
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+ const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   useEffect(() => {
     getProjects();
   }, []);
 
-  const handleDelete = async (project: Project) => {
-    const { error } = await connectSupabase.from("projects").delete().eq("id", project.id);
+  const handleDelete = async () => {
+  if (!selectedProject) return;
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+  const { error } = await connectSupabase
+    .from("projects")
+    .delete()
+    .eq("id", selectedProject.id);
 
-    getProjects();
-  };
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setIsDeleteOpen(false);
+  setSelectedProject(null);
+  getProjects();
+};
 
   const handleEdit = (project: Project) => {
     setMode("edit");
@@ -153,12 +161,15 @@ export function ProjectsPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((p) => (
             <ProjectCard
-              key={p.id}
-              project={p}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onView={handleView}
-            />
+            key={p.id}
+            project={p}
+            onEdit={handleEdit}
+            onDelete={() => {
+             setSelectedProject(p);
+             setIsDeleteOpen(true);
+  }}
+  onView={handleView}
+/>
           ))}
         </div>
       )}
@@ -174,6 +185,38 @@ export function ProjectsPage() {
           setMode("create");
         }}
       />
+      {isDeleteOpen && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+      <h2 className="text-xl font-bold">
+        Delete Project
+      </h2>
+
+      <p className="mt-3">
+        Are you sure you want to delete this project?
+      </p>
+
+      <div className="flex justify-end gap-3 mt-6">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setIsDeleteOpen(false);
+            setSelectedProject(null);
+          }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          variant="destructive"
+          onClick={handleDelete}
+        >
+           Confirm Delete
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

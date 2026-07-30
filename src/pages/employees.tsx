@@ -496,13 +496,15 @@ function AddEmployeeModal({
       if (uploadError) throw uploadError;
 
       const { error } = await connectSupabase.from("employee").insert({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        avatarUrl: filePath,
-        department: formData.department,
-        role: formData.role,
-        status: formData.status,
+       
+  emp_name: formData.name,
+  emp_email: formData.email,
+  emp_phone: formData.phone,
+  avatarUrl: filePath,
+  department: formData.department,
+  role: formData.role,
+  status: formData.status,
+
       });
 
       if (error) throw error;
