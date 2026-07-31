@@ -16,6 +16,7 @@ import { Modal } from "@/components/ui-kit/modal";
 import { EmptyState } from "@/components/ui-kit/empty-state";
 import type { ProjectStatus, Project } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
+import { toast } from "sonner";
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
@@ -33,28 +34,25 @@ export function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
- const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   useEffect(() => {
     getProjects();
   }, []);
 
   const handleDelete = async () => {
-  if (!selectedProject) return;
+    if (!selectedProject) return;
 
-  const { error } = await connectSupabase
-    .from("projects")
-    .delete()
-    .eq("id", selectedProject.id);
+    const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+    if (error) {
+      console.error(error);
+      return;
+    } else toast.success("Deleted successfully");
 
-  setIsDeleteOpen(false);
-  setSelectedProject(null);
-  getProjects();
-};
+    setIsDeleteOpen(false);
+    setSelectedProject(null);
+    getProjects();
+  };
 
   const handleEdit = (project: Project) => {
     setMode("edit");
@@ -161,15 +159,15 @@ export function ProjectsPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((p) => (
             <ProjectCard
-            key={p.id}
-            project={p}
-            onEdit={handleEdit}
-            onDelete={() => {
-             setSelectedProject(p);
-             setIsDeleteOpen(true);
-  }}
-  onView={handleView}
-/>
+              key={p.id}
+              project={p}
+              onEdit={handleEdit}
+              onDelete={() => {
+                setSelectedProject(p);
+                setIsDeleteOpen(true);
+              }}
+              onView={handleView}
+            />
           ))}
         </div>
       )}
@@ -186,37 +184,30 @@ export function ProjectsPage() {
         }}
       />
       {isDeleteOpen && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-      <h2 className="text-xl font-bold">
-        Delete Project
-      </h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+            <h2 className="text-xl font-bold">Delete Project</h2>
 
-      <p className="mt-3">
-        Are you sure you want to delete this project?
-      </p>
+            <p className="mt-3">Are you sure you want to delete this project?</p>
 
-      <div className="flex justify-end gap-3 mt-6">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setIsDeleteOpen(false);
-            setSelectedProject(null);
-          }}
-        >
-          Cancel
-        </Button>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteOpen(false);
+                  setSelectedProject(null);
+                }}
+              >
+                Cancel
+              </Button>
 
-        <Button
-          variant="destructive"
-          onClick={handleDelete}
-        >
-           Confirm Delete
-        </Button>
-      </div>
-    </div>
-  </div>
-)}
+              <Button variant="destructive" onClick={handleDelete}>
+                Confirm Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -312,7 +303,7 @@ function CreateProjectModal({
       if (error) {
         console.error("Update Error:", error);
         return;
-      }
+      } else toast.success("Project updated successfully");
     } else {
       // CREATE PROJECT
       const {
@@ -330,7 +321,7 @@ function CreateProjectModal({
       if (error) {
         console.error("Insert Error:", error);
         return;
-      }
+      } else toast.success("Project created successfully");
     }
 
     // Refresh project list

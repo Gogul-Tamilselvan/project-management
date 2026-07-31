@@ -47,7 +47,7 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
     const { error } = await connectSupabase.auth.signOut();
     if (error) {
       toast.error(error.message);
-    }
+    } else toast.info("Logout successfully");
 
     setTimeout(() => {
       navigate("/");

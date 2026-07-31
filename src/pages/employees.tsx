@@ -42,7 +42,6 @@ import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
 import { getTasks } from "@/lib/data";
 
-
 export function EmployeesPage() {
   const [open, setOpen] = useState<boolean>(false);
   const [editopen, seteditopen] = useState<boolean>(false);
@@ -486,7 +485,6 @@ function AddEmployeeModal({
       if (uploadError) throw uploadError;
 
       const { error } = await connectSupabase.from("employee").insert({
-
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -494,7 +492,6 @@ function AddEmployeeModal({
         department: formData.department,
         role: formData.role,
         status: formData.status,
-
       });
 
       if (error) throw error;

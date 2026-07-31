@@ -44,8 +44,8 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
   const logout = async () => {
     const { error } = await connectSupabase.auth.signOut();
     if (error) {
-      toast.error(error);
-    }
+      toast.error(error.message);
+    } else toast.info("Logout successfully");
 
     setTimeout(() => {
       navigate("/");
