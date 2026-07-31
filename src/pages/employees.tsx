@@ -42,16 +42,6 @@ import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
 import { getTasks } from "@/lib/data";
 
-interface EmployeDB {
-  id: string;
-  emp_name: string;
-  emp_email: string;
-  emp_phone: string;
-  avatarUrl?: string;
-  department: string;
-  role: string;
-  status: EmployeeStatus;
-}
 
 export function EmployeesPage() {
   const [open, setOpen] = useState<boolean>(false);
@@ -69,7 +59,7 @@ export function EmployeesPage() {
     if (error) {
       toast.error("delete error" + error);
       return;
-    } else toast.success("deleted successfully");
+    } else toast.success("Deleted successfully.");
     getEmployes();
   };
   const getEmployes = async () => {
@@ -323,7 +313,7 @@ function EditEmployeeModal({
         return;
       }
 
-      toast.success("Employee updated successfully!");
+      toast.success("Employee Updated successfully.");
       seteditopen(false);
     } catch (error) {
       toast.error((error as Error).message);
@@ -496,20 +486,20 @@ function AddEmployeeModal({
       if (uploadError) throw uploadError;
 
       const { error } = await connectSupabase.from("employee").insert({
-       
-  emp_name: formData.name,
-  emp_email: formData.email,
-  emp_phone: formData.phone,
-  avatarUrl: filePath,
-  department: formData.department,
-  role: formData.role,
-  status: formData.status,
+
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        avatarUrl: filePath,
+        department: formData.department,
+        role: formData.role,
+        status: formData.status,
 
       });
 
       if (error) throw error;
 
-      toast.success("Employee added!");
+      toast.success("Employee Added Successfully.");
       onOpenChange(false);
     } catch (error) {
       toast.error((error as Error).message);
