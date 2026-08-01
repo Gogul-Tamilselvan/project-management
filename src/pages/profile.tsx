@@ -8,35 +8,25 @@ import { Modal } from "@/components/ui-kit/modal";
 import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
 import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
-import { EmployeeStatus } from "@/lib/types";
+import { Employee, EmployeeStatus } from "@/lib/types";
 import { toast } from "sonner";
 
-interface EmployeeDB {
-  id: string;
-  emp_name: string;
-  emp_email: string;
-  emp_phone: string;
-  avatarUrl?: string | null;
-  department: string;
-  role: string;
-  status: EmployeeStatus;
-}
 
 export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
-  const [user, setUser] = useState<EmployeeDB | null>(null);
+  const [user, setUser] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [assignedTasks, setAssignedTasks] = useState(0);
   const [completedTasks, setCompletedTasks] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
 
-  const [formData, setFormData] = useState<EmployeeDB>({
+  const [formData, setFormData] = useState<Employee>({
     id: "",
-    emp_name: "",
-    emp_email: "",
-    emp_phone: "",
-    avatarUrl: null,
+    name: "",
+    email: "",
+    phone: "",
+    avatarUrl: "",
     department: "",
     role: "",
     status: "active",
@@ -58,9 +48,9 @@ export function ProfilePage() {
     const { error } = await connectSupabase
       .from("employee")
       .update({
-        emp_name: formData.emp_name,
-        emp_email: formData.emp_email,
-        emp_phone: formData.emp_phone,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
         department: formData.department,
         role: formData.role,
       })
@@ -86,22 +76,22 @@ export function ProfilePage() {
   };
 
   const fetchStats = async (employeeId: string) => {
-  const { data, error } = await connectSupabase.rpc(
-    "get_employee_stats",
-    { emp_id: employeeId }
-  );
+    const { data, error } = await connectSupabase.rpc(
+      "get_employee_stats",
+      { emp_id: employeeId }
+    );
 
-  if (error) {
-    console.error(error);
-    return;
-  }
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-  const stats = data[0];
+    const stats = data[0];
 
-  setAssignedTasks(Number(stats.assigned_tasks));
-  setCompletedTasks(Number(stats.completed_tasks));
-  setActiveProjects(Number(stats.active_projects));
-};
+    setAssignedTasks(Number(stats.assigned_tasks));
+    setCompletedTasks(Number(stats.completed_tasks));
+    setActiveProjects(Number(stats.active_projects));
+  };
 
   const changePassword = async () => {
     if (!passwordData.currentPassword) {
@@ -177,7 +167,7 @@ export function ProfilePage() {
     const { data, error } = await connectSupabase
       .from("employee")
       .select("*")
-      .eq("emp_email", authUser.email)
+      .eq("email", authUser.email)
       .single();
 
     if (error) {
@@ -226,12 +216,18 @@ export function ProfilePage() {
         <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
-              <AvatarImage src={user?.avatarUrl ?? undefined} alt={user?.emp_name ?? ""} />
-              <AvatarFallback className="text-2xl">{initials(user?.emp_name ?? "")}</AvatarFallback>
+              <AvatarImage src={
+                  connectSupabase.storage
+                    .from("Employee")
+                    .getPublicUrl(user?.avatarUrl ?? "").data.publicUrl
+                }
+                alt={user?.name ?? ""}
+              /> 
+              <AvatarFallback className="text-2xl">{initials(user?.name ?? "")}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-bold text-foreground">{user?.emp_name}</h2>
+                <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
                 {user && <EmployeeStatusBadge status={user.status} />}
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{user?.role}</p>
@@ -261,8 +257,8 @@ export function ProfilePage() {
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-2">
-            <InfoRow icon={Mail} label="Email" value={user?.emp_email ?? ""} />
-            <InfoRow icon={Phone} label="Phone" value={user?.emp_phone ?? ""} />
+            <InfoRow icon={Mail} label="Email" value={user?.email ?? ""} />
+            <InfoRow icon={Phone} label="Phone" value={user?.phone ?? ""} />
             <InfoRow icon={Building2} label="Department" value={user?.department ?? ""} />
             <InfoRow icon={Briefcase} label="Role" value={user?.role ?? ""} />
           </div>
@@ -297,11 +293,11 @@ export function ProfilePage() {
             <Label htmlFor="pr-name">Full name</Label>
             <Input
               id="pr-name"
-              value={formData.emp_name}
+              value={formData.name}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  emp_name: e.target.value,
+                  name: e.target.value,
                 })
               }
               className="mt-1.5"
@@ -311,11 +307,11 @@ export function ProfilePage() {
             <Label htmlFor="pr-email">Email</Label>
             <Input
               id="pr-email"
-              value={formData.emp_email}
+              value={formData.email}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  emp_email: e.target.value,
+                  email: e.target.value,
                 })
               }
               className="mt-1.5"
@@ -325,11 +321,11 @@ export function ProfilePage() {
             <Label htmlFor="pr-phone">Phone</Label>
             <Input
               id="pr-phone"
-              value={formData.emp_phone}
+              value={formData.phone}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  emp_phone: e.target.value,
+                  phone: e.target.value,
                 })
               }
               className="mt-1.5"

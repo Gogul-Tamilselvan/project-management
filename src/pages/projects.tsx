@@ -42,12 +42,14 @@ export function ProjectsPage() {
   const handleDelete = async () => {
     if (!selectedProject) return;
 
+
     const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
 
     if (error) {
       console.error(error);
       return;
     } else toast.success("Deleted successfully");
+
 
     setIsDeleteOpen(false);
     setSelectedProject(null);
@@ -186,6 +188,7 @@ export function ProjectsPage() {
       {isDeleteOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+
             <h2 className="text-xl font-bold">Delete Project</h2>
 
             <p className="mt-3">Are you sure you want to delete this project?</p>
@@ -200,6 +203,7 @@ export function ProjectsPage() {
               >
                 Cancel
               </Button>
+
 
               <Button variant="destructive" onClick={handleDelete}>
                 Confirm Delete
@@ -249,9 +253,11 @@ function CreateProjectModal({
     teamIds: [],
   });
 
+  const [originalData, setOriginalData] = useState<ProjectFormData | null>(null);
+
   useEffect(() => {
     if (editingProject) {
-      setFormData({
+      const projectData = {
         id: editingProject.id,
         name: editingProject.name,
         description: editingProject.description,
@@ -260,20 +266,28 @@ function CreateProjectModal({
         startDate: editingProject.startDate,
         dueDate: editingProject.dueDate,
         teamIds: editingProject.teamIds,
-      });
+      };
+
+      setFormData(projectData);
+      setOriginalData(projectData);
     } else {
-      setFormData({
+      const emptyData = {
         id: "",
         name: "",
         description: "",
-        status: "planning",
+        status: "planning" as ProjectStatus,
         progress: 0,
         startDate: "",
         dueDate: "",
         teamIds: [],
-      });
+      };
+
+      setFormData(emptyData);
+      setOriginalData(emptyData);
     }
   }, [editingProject]);
+  
+  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({
@@ -380,7 +394,7 @@ function CreateProjectModal({
             {mode === "view" ? "Close" : "Cancel"}
           </Button>
           {mode !== "view" && (
-            <Button type="submit" form="project-form">
+            <Button type="submit" form="project-form" disabled={mode === "edit" && !hasChanges}>
               {mode === "create" ? "Create Project" : "Update Project"}
             </Button>
           )}

@@ -247,10 +247,11 @@ function EditEmployeeModal({
     status: "" as EmployeeStatus,
   });
   const [updateimage, setupdateimage] = useState<File | null>(null);
+  const [originalData, setOriginalData] = useState<Employee | null>(null);
 
   useEffect(() => {
     if (employee) {
-      setupdatedata({
+      const data = {
         id: employee.id,
         name: employee.name,
         email: employee.email,
@@ -259,9 +260,14 @@ function EditEmployeeModal({
         department: employee.department,
         role: employee.role,
         status: employee.status,
-      });
+      };
+      setupdatedata(data);
+      setOriginalData(data);
+      setupdateimage(null)
     }
   }, [employee]);
+
+  const haschanges = JSON.stringify(updatedata) !== JSON.stringify(originalData) || updateimage !== null 
 
   const updatedetails = async () => {
     try {
@@ -313,6 +319,7 @@ function EditEmployeeModal({
       }
 
       toast.success("Employee Updated successfully.");
+      setupdateimage(null)
       seteditopen(false);
     } catch (error) {
       toast.error((error as Error).message);
@@ -330,7 +337,7 @@ function EditEmployeeModal({
           <Button variant="ghost" onClick={() => seteditopen(false)}>
             Cancel
           </Button>
-          <Button type="submit" form="employe-form" onClick={updatedetails}>
+          <Button type="submit" form="employe-form" onClick={updatedetails} disabled={!haschanges}>
             Update details
           </Button>
         </>
