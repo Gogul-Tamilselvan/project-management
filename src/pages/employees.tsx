@@ -196,7 +196,13 @@ export function EmployeesPage() {
         {/* <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2"> */}
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
-            <AvatarImage src={proDetails?.avatarUrl} alt={proDetails?.name} />
+            <AvatarImage
+              src={
+                connectSupabase.storage.from("Employee").getPublicUrl(proDetails?.avatarUrl ?? "")
+                  .data.publicUrl
+              }
+              alt={proDetails?.name}
+            />
             <AvatarFallback className="text-2xl">{initials(proDetails?.name ?? "")}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -263,11 +269,12 @@ function EditEmployeeModal({
       };
       setupdatedata(data);
       setOriginalData(data);
-      setupdateimage(null)
+      setupdateimage(null);
     }
   }, [employee]);
 
-  const haschanges = JSON.stringify(updatedata) !== JSON.stringify(originalData) || updateimage !== null 
+  const haschanges =
+    JSON.stringify(updatedata) !== JSON.stringify(originalData) || updateimage !== null;
 
   const updatedetails = async () => {
     try {
@@ -319,7 +326,7 @@ function EditEmployeeModal({
       }
 
       toast.success("Employee Updated successfully.");
-      setupdateimage(null)
+      setupdateimage(null);
       seteditopen(false);
     } catch (error) {
       toast.error((error as Error).message);
