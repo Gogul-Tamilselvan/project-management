@@ -31,6 +31,7 @@ export function ProfilePage() {
     role: "",
     status: "active",
   });
+  const [isEdited, setIsEdited] = useState(false);
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -67,7 +68,7 @@ export function ProfilePage() {
 
     // Close the modal
     setEditOpen(false);
-
+     setIsEdited(false);
     // Optional success message
     toast.success("Profile updated successfully");
 
@@ -145,6 +146,7 @@ export function ProfilePage() {
     }
 
     toast.success("Password updated successfully");
+  setIsPasswordEdited(false);
 
     setPasswordData({
       currentPassword: "",
@@ -154,6 +156,7 @@ export function ProfilePage() {
 
     setPwOpen(false);
   };
+  const [isPasswordEdited, setIsPasswordEdited] = useState(false);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -238,6 +241,7 @@ export function ProfilePage() {
                     if (user) {
                       setFormData(user);
                     }
+                    setIsEdited(false);
                     setEditOpen(true);
                   }}
                   className="gap-1.5"
@@ -247,7 +251,15 @@ export function ProfilePage() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => setPwOpen(true)}
+                onClick={() => { setPasswordData({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: "",
+  });
+
+  setIsPasswordEdited(false);
+  setPwOpen(true);
+}}
                   className="gap-1.5"
                 >
                   <KeyRound className="h-3.5 w-3.5" /> Change password
@@ -281,7 +293,9 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={updateProfile}>Save changes</Button>
+           <Button disabled={!isEdited} onClick={updateProfile}>
+           Save changes
+           </Button>
           </>
         }
       >
@@ -294,12 +308,13 @@ export function ProfilePage() {
             <Input
               id="pr-name"
               value={formData.name}
-              onChange={(e) =>
+              onChange={(e) =>{
+             setIsEdited(true);
                 setFormData({
                   ...formData,
                   name: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -308,12 +323,14 @@ export function ProfilePage() {
             <Input
               id="pr-email"
               value={formData.email}
-              onChange={(e) =>
+              onChange={(e) =>{
+                 setIsEdited(true)
+              
                 setFormData({
                   ...formData,
                   email: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -322,12 +339,13 @@ export function ProfilePage() {
             <Input
               id="pr-phone"
               value={formData.phone}
-              onChange={(e) =>
+              onChange={(e) =>{
+                 setIsEdited(true)
                 setFormData({
                   ...formData,
                   phone: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -336,12 +354,13 @@ export function ProfilePage() {
             <Input
               id="pr-dept"
               value={formData.department}
-              onChange={(e) =>
+              onChange={(e) =>{
+                 setIsEdited(true);
                 setFormData({
                   ...formData,
                   department: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -350,12 +369,13 @@ export function ProfilePage() {
             <Input
               id="pr-role"
               value={formData.role}
-              onChange={(e) =>
+              onChange={(e) =>{
+                 setIsEdited(true);
                 setFormData({
                   ...formData,
                   role: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -371,7 +391,12 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setPwOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={changePassword}>Update password</Button>
+            <Button
+  disabled={!isPasswordEdited}
+  onClick={changePassword}
+>
+  Update password
+</Button>
           </>
         }
       >
@@ -382,12 +407,13 @@ export function ProfilePage() {
               id="pw-current"
               type="password"
               value={passwordData.currentPassword}
-              onChange={(e) =>
+              onChange={(e) =>{
+                  setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   currentPassword: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -397,12 +423,13 @@ export function ProfilePage() {
               id="pw-new"
               type="password"
               value={passwordData.newPassword}
-              onChange={(e) =>
+              onChange={(e) =>{
+     setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   newPassword: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
@@ -412,12 +439,13 @@ export function ProfilePage() {
               id="pw-confirm"
               type="password"
               value={passwordData.confirmPassword}
-              onChange={(e) =>
+              onChange={(e) =>{
+                 setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   confirmPassword: e.target.value,
                 })
-              }
+              }}
               className="mt-1.5"
             />
           </div>
