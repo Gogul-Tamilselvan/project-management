@@ -76,6 +76,7 @@ export function TasksPage() {
   const [empName, setEmpName] = useState<empName[]>([]);
   const [task, settask] = useState<TaskDetail[]>([]);
 
+  
   const getTasks = async () => {
     const { data, error } = await connectSupabase
       .from("task")
@@ -451,14 +452,16 @@ function CreateTaskModal({
         </div>
         <div>
           <Label>Priority</Label>
-          <Select
-            required
-            value={projectDetail.priority}
-            defaultValue="low"
-            onValueChange={(val: Priority) =>
-              setprojectDetail((prev) => ({ ...prev, priority: val }))
-            }
-          >
+         <Select
+           required  value={projectDetail.priority}
+         defaultValue="low"
+  onValueChange={(val: Priority) =>
+    setprojectDetail((prev) => ({
+      ...prev,
+      priority: val,
+    }))
+  }
+>
             <SelectTrigger className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
@@ -609,7 +612,23 @@ function EditTask({
     dueDate: value?.dueDate,
     // emp_image: value?.emp_image,
   });
-
+  const [isEdited, setIsEdited] = useState(false);
+  useEffect(() => {
+  if (open) {
+    setEditTask({
+      id: value.id,
+      title: value.title,
+      description: value.description,
+      projectId: value.projectId,
+      assigneeId: value.assigneeId,
+      priority: value.priority,
+      status: value.status,
+      dueDate: value.dueDate,
+    });
+    setIsEdited(false);
+  }
+}, [open, value]);
+    
   const editTaskfun = async (id: string) => {
     const { error } = await connectSupabase
       .from("task")
@@ -644,7 +663,12 @@ function EditTask({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => editTaskfun(value?.id)}>update</Button>
+         <Button
+  disabled={!isEdited}
+  onClick={() => editTaskfun(value.id)}
+>
+  Update
+</Button>
         </>
       }
     >
@@ -661,8 +685,15 @@ function EditTask({
             className="mt-1.5"
             required
 
-            defaultValue={value?.title}
-            onChange={(e) => setEditTask((prev) => ({ ...prev, title: e.target.value }))}
+           value={editTask.title}
+           onChange={(e) => {
+  setIsEdited(true);
+
+  setEditTask((prev) => ({
+    ...prev,
+    title: e.target.value,
+  }));
+}}
           />
         </div>
         <div className="sm:col-span-2">
@@ -673,8 +704,15 @@ function EditTask({
             rows={3}
             className="mt-1.5"
 
-            defaultValue={value?.description}
-            onChange={(e) => setEditTask((prev) => ({ ...prev, description: e.target.value }))}
+             value={editTask.description}
+            onChange={(e) => {
+  setIsEdited(true);
+
+  setEditTask((prev) => ({
+    ...prev,
+    description: e.target.value,
+  }));
+}}
           />
         </div>
         <div>
@@ -682,7 +720,14 @@ function EditTask({
           <Select
             required
             defaultValue={value?.projectId}
-            onValueChange={(val) => setEditTask((prev) => ({ ...prev, projectId: val }))}
+           onValueChange={(val) => {
+  setIsEdited(true);
+
+  setEditTask((prev) => ({
+    ...prev,
+    projectId: val,
+  }));
+}}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select project" />
@@ -699,8 +744,15 @@ function EditTask({
         <div>
           <Label>Assignee</Label>
           <Select
-            defaultValue={value?.assigneeId}
-            onValueChange={(val) => setEditTask((prev) => ({ ...prev, assigneeId: val }))}
+           value={editTask.assigneeId}
+           onValueChange={(val) => {
+  setIsEdited(true);
+
+  setEditTask((prev) => ({
+    ...prev,
+    assigneeId: val,
+  }));
+}}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select employee" />
@@ -719,7 +771,7 @@ function EditTask({
           <Label>Priority</Label>
           <Select
             required
-            defaultValue={value?.priority}
+            value={editTask.priority}
             onValueChange={(val: Priority) => setEditTask((prev) => ({ ...prev, priority: val }))}
           >
             <SelectTrigger className="mt-1.5">
@@ -737,8 +789,14 @@ function EditTask({
           <Label>Status</Label>
           <Select
             required
-            defaultValue={value?.status}
-            onValueChange={(val: TaskStatus) => setEditTask((prev) => ({ ...prev, status: val }))}
+           value={editTask.status}
+            onValueChange={(val: TaskStatus) => {
+  setIsEdited(true);
+  setEditTask((prev) => ({
+    ...prev,
+    status: val,
+  }));
+}}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue />
@@ -759,8 +817,14 @@ function EditTask({
             type="date"
 
             className="mt-1.5"
-            defaultValue={value?.dueDate}
-            onChange={(e) => setEditTask((prev) => ({ ...prev, dueDate: e.target.value }))}
+            value={editTask.dueDate}
+           onChange={(e) => {
+  setIsEdited(true);
+  setEditTask((prev) => ({
+    ...prev,
+    dueDate: e.target.value,
+  }));
+}}
           />
         </div>
       </form>
