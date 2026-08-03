@@ -387,7 +387,7 @@ function CreateTaskModal({
         onSubmit={(e) => e.preventDefault()}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title</Label>
+          <Label htmlFor="t-name">Task title <span className="text-red-500">*</span></Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -398,7 +398,7 @@ function CreateTaskModal({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description</Label>
+          <Label htmlFor="t-desc">Description <span className="text-red-500">*</span></Label>
           <Textarea
             id="t-desc"
             value={projectDetail.description}
@@ -409,7 +409,7 @@ function CreateTaskModal({
           />
         </div>
         <div>
-          <Label>Project</Label>
+          <Label>Project <span className="text-red-500">*</span></Label>
           <Select
             value={projectDetail.projectId}
             required
@@ -428,7 +428,7 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-          <Label>Assignee</Label>
+          <Label>Assignee <span className="text-red-500">*</span></Label>
           <Select
             value={projectDetail.assigneeId}
             required
@@ -450,7 +450,7 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-          <Label>Priority</Label>
+          <Label>Priority <span className="text-red-500">*</span></Label>
           <Select
             required
             value={projectDetail.priority}
@@ -471,7 +471,7 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-          <Label htmlFor="t-due">Due date</Label>
+          <Label htmlFor="t-due">Due date <span className="text-red-500">*</span></Label>
           <Input
             id="t-due"
             required
@@ -511,11 +511,11 @@ function ViewTask({
     >
       <form className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title</Label>
+          <Label htmlFor="t-name">Task title <span className="text-red-500">*</span></Label>
           <Input id="t-name" className="mt-1.5" required readOnly defaultValue={value?.title} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description</Label>
+          <Label htmlFor="t-desc">Description <span className="text-red-500">*</span></Label>
           <Textarea
             id="t-desc"
             required
@@ -526,7 +526,7 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Project</Label>
+          <Label>Project <span className="text-red-500">*</span></Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -537,7 +537,7 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Assignee</Label>
+          <Label>Assignee <span className="text-red-500">*</span></Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -548,7 +548,7 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Priority</Label>
+          <Label>Priority <span className="text-red-500">*</span></Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -559,7 +559,7 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Status</Label>
+          <Label>Status <span className="text-red-500">*</span></Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -570,7 +570,7 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label htmlFor="t-due">Due date</Label>
+          <Label htmlFor="t-due">Due date <span className="text-red-500">*</span></Label>
           <Input
             id="t-due"
             required
@@ -654,7 +654,7 @@ function EditTask({
         onSubmit={(e) => e.preventDefault()}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title</Label>
+          <Label htmlFor="t-name">Task title <span className="text-red-500">*</span></Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -666,7 +666,7 @@ function EditTask({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description</Label>
+          <Label htmlFor="t-desc">Description <span className="text-red-500">*</span></Label>
           <Textarea
             id="t-desc"
             required
@@ -678,7 +678,7 @@ function EditTask({
           />
         </div>
         <div>
-          <Label>Project</Label>
+          <Label>Project <span className="text-red-500">*</span></Label>
           <Select
             required
             defaultValue={value?.projectId}
@@ -697,8 +697,9 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label>Assignee</Label>
+          <Label>Assignee <span className="text-red-500">*</span></Label>
           <Select
+            required
             defaultValue={value?.assigneeId}
             onValueChange={(val) => setEditTask((prev) => ({ ...prev, assigneeId: val }))}
           >
@@ -716,7 +717,7 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label>Priority</Label>
+          <Label>Priority <span className="text-red-500">*</span></Label>
           <Select
             required
             defaultValue={value?.priority}
@@ -734,7 +735,7 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label>Status</Label>
+          <Label>Status <span className="text-red-500">*</span></Label>
           <Select
             required
             defaultValue={value?.status}
@@ -752,7 +753,7 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label htmlFor="t-due">Due date</Label>
+          <Label htmlFor="t-due">Due date <span className="text-red-500">*</span></Label>
           <Input
             id="t-due"
             required

@@ -407,7 +407,7 @@ function CreateProjectModal({
         onSubmit={handleSubmit}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="p-name">Project name</Label>
+          <Label htmlFor="p-name">Project name <span className="text-red-500">*</span></Label>
           <Input
             id="p-name"
             placeholder="e.g. Mobile App v3"
@@ -416,10 +416,11 @@ function CreateProjectModal({
             value={formData.name}
             onChange={handleChange}
             readOnly={mode === "view"}
+            required
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="p-desc">Description</Label>
+          <Label htmlFor="p-desc">Description <span className="text-red-500">*</span></Label>
           <Textarea
             id="p-desc"
             placeholder="What is this project about?"
@@ -429,10 +430,11 @@ function CreateProjectModal({
             value={formData.description}
             onChange={handleChange}
             readOnly={mode === "view"}
+            required
           />
         </div>
         <div>
-          <Label htmlFor="p-start">Start date</Label>
+          <Label htmlFor="p-start">Start date <span className="text-red-500">*</span></Label>
           <Input
             id="p-start"
             type="date"
@@ -441,10 +443,11 @@ function CreateProjectModal({
             value={formData.startDate}
             onChange={handleChange}
             readOnly={mode === "view"}
+            required
           />
         </div>
         <div>
-          <Label htmlFor="p-end">End date</Label>
+          <Label htmlFor="p-end">End date <span className="text-red-500">*</span></Label>
           <Input
             id="p-end"
             type="date"
@@ -453,10 +456,11 @@ function CreateProjectModal({
             value={formData.dueDate}
             onChange={handleChange}
             readOnly={mode === "view"}
+            required
           />
         </div>
         <div className="sm:col-span-2">
-          <Label>Status</Label>
+          <Label>Status <span className="text-red-500">*</span></Label>
           <Select
             value={formData.status}
             disabled={mode === "view"}
