@@ -76,7 +76,6 @@ export function TasksPage() {
   const [empName, setEmpName] = useState<empName[]>([]);
   const [task, settask] = useState<TaskDetail[]>([]);
 
-  
   const getTasks = async () => {
     const { data, error } = await connectSupabase
       .from("task")
@@ -388,7 +387,9 @@ function CreateTaskModal({
         onSubmit={(e) => e.preventDefault()}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-name">
+            Task title <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -399,7 +400,9 @@ function CreateTaskModal({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
           <Textarea
             id="t-desc"
             value={projectDetail.description}
@@ -410,7 +413,9 @@ function CreateTaskModal({
           />
         </div>
         <div>
-          <Label>Project <span className="text-red-500">*</span></Label>
+          <Label>
+            Project <span className="text-red-500">*</span>
+          </Label>
           <Select
             value={projectDetail.projectId}
             required
@@ -429,7 +434,9 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-          <Label>Assignee <span className="text-red-500">*</span></Label>
+          <Label>
+            Assignee <span className="text-red-500">*</span>
+          </Label>
           <Select
             value={projectDetail.assigneeId}
             required
@@ -451,8 +458,7 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-<<<<<<< HEAD
-          <Label>Priority <span className="text-red-500">*</span></Label>
+          <Label>Priority</Label>
           <Select
             required
             value={projectDetail.priority}
@@ -461,19 +467,6 @@ function CreateTaskModal({
               setprojectDetail((prev) => ({ ...prev, priority: val }))
             }
           >
-=======
-          <Label>Priority</Label>
-         <Select
-           required  value={projectDetail.priority}
-         defaultValue="low"
-  onValueChange={(val: Priority) =>
-    setprojectDetail((prev) => ({
-      ...prev,
-      priority: val,
-    }))
-  }
->
->>>>>>> bb3f60fe09e6926afa3a002678a32c269471a555
             <SelectTrigger className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
@@ -486,7 +479,9 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-          <Label htmlFor="t-due">Due date <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-due">
+            Due date <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-due"
             required
@@ -526,11 +521,15 @@ function ViewTask({
     >
       <form className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-name">
+            Task title <span className="text-red-500">*</span>
+          </Label>
           <Input id="t-name" className="mt-1.5" required readOnly defaultValue={value?.title} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
           <Textarea
             id="t-desc"
             required
@@ -541,7 +540,9 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Project <span className="text-red-500">*</span></Label>
+          <Label>
+            Project <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -552,7 +553,9 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Assignee <span className="text-red-500">*</span></Label>
+          <Label>
+            Assignee <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -563,7 +566,7 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Priority <span className="text-red-500">*</span></Label>
+          <Label>Priority</Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -574,7 +577,9 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label>Status <span className="text-red-500">*</span></Label>
+          <Label>
+            Status <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
@@ -585,7 +590,9 @@ function ViewTask({
           />
         </div>
         <div>
-          <Label htmlFor="t-due">Due date <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-due">
+            Due date <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-due"
             required
@@ -626,21 +633,21 @@ function EditTask({
   });
   const [isEdited, setIsEdited] = useState(false);
   useEffect(() => {
-  if (open) {
-    setEditTask({
-      id: value.id,
-      title: value.title,
-      description: value.description,
-      projectId: value.projectId,
-      assigneeId: value.assigneeId,
-      priority: value.priority,
-      status: value.status,
-      dueDate: value.dueDate,
-    });
-    setIsEdited(false);
-  }
-}, [open, value]);
-    
+    if (open) {
+      setEditTask({
+        id: value.id,
+        title: value.title,
+        description: value.description,
+        projectId: value.projectId,
+        assigneeId: value.assigneeId,
+        priority: value.priority,
+        status: value.status,
+        dueDate: value.dueDate,
+      });
+      setIsEdited(false);
+    }
+  }, [open, value]);
+
   const editTaskfun = async (id: string) => {
     const { error } = await connectSupabase
       .from("task")
@@ -675,12 +682,9 @@ function EditTask({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-         <Button
-  disabled={!isEdited}
-  onClick={() => editTaskfun(value.id)}
->
-  Update
-</Button>
+          <Button disabled={!isEdited} onClick={() => editTaskfun(value.id)}>
+            Update
+          </Button>
         </>
       }
     >
@@ -690,56 +694,62 @@ function EditTask({
         onSubmit={(e) => e.preventDefault()}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-name">
+            Task title <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-name"
             placeholder="What needs to get done?"
             className="mt-1.5"
             required
 
-           value={editTask.title}
-           onChange={(e) => {
-  setIsEdited(true);
+            value={editTask.title}
+            onChange={(e) => {
+              setIsEdited(true);
 
-  setEditTask((prev) => ({
-    ...prev,
-    title: e.target.value,
-  }));
-}}
+              setEditTask((prev) => ({
+                ...prev,
+                title: e.target.value,
+              }));
+            }}
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
           <Textarea
             id="t-desc"
             required
             rows={3}
             className="mt-1.5"
 
-             value={editTask.description}
+            value={editTask.description}
             onChange={(e) => {
-  setIsEdited(true);
+              setIsEdited(true);
 
-  setEditTask((prev) => ({
-    ...prev,
-    description: e.target.value,
-  }));
-}}
+              setEditTask((prev) => ({
+                ...prev,
+                description: e.target.value,
+              }));
+            }}
           />
         </div>
         <div>
-          <Label>Project <span className="text-red-500">*</span></Label>
+          <Label>
+            Project <span className="text-red-500">*</span>
+          </Label>
           <Select
             required
             defaultValue={value?.projectId}
-           onValueChange={(val) => {
-  setIsEdited(true);
+            onValueChange={(val) => {
+              setIsEdited(true);
 
-  setEditTask((prev) => ({
-    ...prev,
-    projectId: val,
-  }));
-}}
+              setEditTask((prev) => ({
+                ...prev,
+                projectId: val,
+              }));
+            }}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select project" />
@@ -754,23 +764,13 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label>Assignee <span className="text-red-500">*</span></Label>
+          <Label>
+            Assignee <span className="text-red-500">*</span>
+          </Label>
           <Select
-<<<<<<< HEAD
             required
             defaultValue={value?.assigneeId}
             onValueChange={(val) => setEditTask((prev) => ({ ...prev, assigneeId: val }))}
-=======
-           value={editTask.assigneeId}
-           onValueChange={(val) => {
-  setIsEdited(true);
-
-  setEditTask((prev) => ({
-    ...prev,
-    assigneeId: val,
-  }));
-}}
->>>>>>> bb3f60fe09e6926afa3a002678a32c269471a555
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select employee" />
@@ -786,7 +786,7 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label>Priority <span className="text-red-500">*</span></Label>
+          <Label>Priority</Label>
           <Select
             required
             value={editTask.priority}
@@ -804,17 +804,19 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label>Status <span className="text-red-500">*</span></Label>
+          <Label>
+            Status <span className="text-red-500">*</span>
+          </Label>
           <Select
             required
-           value={editTask.status}
+            value={editTask.status}
             onValueChange={(val: TaskStatus) => {
-  setIsEdited(true);
-  setEditTask((prev) => ({
-    ...prev,
-    status: val,
-  }));
-}}
+              setIsEdited(true);
+              setEditTask((prev) => ({
+                ...prev,
+                status: val,
+              }));
+            }}
           >
             <SelectTrigger className="mt-1.5">
               <SelectValue />
@@ -828,7 +830,9 @@ function EditTask({
           </Select>
         </div>
         <div>
-          <Label htmlFor="t-due">Due date <span className="text-red-500">*</span></Label>
+          <Label htmlFor="t-due">
+            Due date <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="t-due"
             required
@@ -836,13 +840,13 @@ function EditTask({
 
             className="mt-1.5"
             value={editTask.dueDate}
-           onChange={(e) => {
-  setIsEdited(true);
-  setEditTask((prev) => ({
-    ...prev,
-    dueDate: e.target.value,
-  }));
-}}
+            onChange={(e) => {
+              setIsEdited(true);
+              setEditTask((prev) => ({
+                ...prev,
+                dueDate: e.target.value,
+              }));
+            }}
           />
         </div>
       </form>

@@ -42,14 +42,12 @@ export function ProjectsPage() {
   const handleDelete = async () => {
     if (!selectedProject) return;
 
-
     const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
 
     if (error) {
       console.error(error);
       return;
     } else toast.success("Deleted successfully");
-
 
     setIsDeleteOpen(false);
     setSelectedProject(null);
@@ -188,7 +186,6 @@ export function ProjectsPage() {
       {isDeleteOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-
             <h2 className="text-xl font-bold">Delete Project</h2>
 
             <p className="mt-3">Are you sure you want to delete this project?</p>
@@ -203,7 +200,6 @@ export function ProjectsPage() {
               >
                 Cancel
               </Button>
-
 
               <Button variant="destructive" onClick={handleDelete}>
                 Confirm Delete
@@ -286,8 +282,8 @@ function CreateProjectModal({
       setOriginalData(emptyData);
     }
   }, [editingProject]);
-  
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData)
+
+  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData((prev) => ({
@@ -407,7 +403,9 @@ function CreateProjectModal({
         onSubmit={handleSubmit}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="p-name">Project name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="p-name">
+            Project name <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="p-name"
             placeholder="e.g. Mobile App v3"
@@ -420,7 +418,9 @@ function CreateProjectModal({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="p-desc">Description <span className="text-red-500">*</span></Label>
+          <Label htmlFor="p-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
           <Textarea
             id="p-desc"
             placeholder="What is this project about?"
@@ -434,7 +434,9 @@ function CreateProjectModal({
           />
         </div>
         <div>
-          <Label htmlFor="p-start">Start date <span className="text-red-500">*</span></Label>
+          <Label htmlFor="p-start">
+            Start date <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="p-start"
             type="date"
@@ -447,7 +449,9 @@ function CreateProjectModal({
           />
         </div>
         <div>
-          <Label htmlFor="p-end">End date <span className="text-red-500">*</span></Label>
+          <Label htmlFor="p-end">
+            End date <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="p-end"
             type="date"
@@ -460,7 +464,7 @@ function CreateProjectModal({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label>Status <span className="text-red-500">*</span></Label>
+          <Label>Status</Label>
           <Select
             value={formData.status}
             disabled={mode === "view"}

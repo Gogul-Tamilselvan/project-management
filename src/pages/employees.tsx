@@ -361,7 +361,6 @@ function EditEmployeeModal({
               <AvatarImage src={updatedata.avatarUrl} />
               <AvatarFallback>{initials(updatedata.name)}</AvatarFallback>
             </Avatar>
-
           </div>
           <div>
             <Input
@@ -370,11 +369,15 @@ function EditEmployeeModal({
               accept="image/*"
               onChange={(e) => setupdateimage(e.target.files?.[0] ?? null)}
             />
-            <p className="mt-1 text-xs text-muted-foreground">PNG or JPG up to 2MB. <span className="text-red-500">*</span></p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              PNG or JPG up to 2MB. <span className="text-red-500">*</span>
+            </p>
           </div>
         </div>
         <div>
-          <Label htmlFor="e-name">Full name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-name">
+            Full name <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-name"
             placeholder="e.g. Jane Cooper"
@@ -385,7 +388,9 @@ function EditEmployeeModal({
           />
         </div>
         <div>
-          <Label htmlFor="e-email">Email <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-email">
+            Email <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-email"
             type="email"
@@ -397,7 +402,9 @@ function EditEmployeeModal({
           />
         </div>
         <div>
-          <Label htmlFor="e-phone">Phone <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-phone">
+            Phone <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-phone"
             placeholder="+1 555 000 0000"
@@ -408,7 +415,9 @@ function EditEmployeeModal({
           />
         </div>
         <div>
-          <Label>Department <span className="text-red-500">*</span></Label>
+          <Label>
+            Department <span className="text-red-500">*</span>
+          </Label>
           <Select
             value={updatedata.department}
             required
@@ -427,7 +436,9 @@ function EditEmployeeModal({
           </Select>
         </div>
         <div>
-          <Label htmlFor="e-role">Designation <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-role">
+            Designation <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-role"
             placeholder="e.g. Senior Product Designer"
@@ -438,7 +449,9 @@ function EditEmployeeModal({
           />
         </div>
         <div>
-          <Label>Status <span className="text-red-500">*</span></Label>
+          <Label>
+            Status <span className="text-red-500">*</span>
+          </Label>
           <Select
             value={updatedata.status}
             required
@@ -560,11 +573,15 @@ function AddEmployeeModal({
               required
               onChange={(e) => setimage(e.target.files?.[0] ?? null)}
             />
-            <p className="mt-1 text-xs text-muted-foreground">PNG or JPG up to 2MB. <span className="text-red-500">*</span></p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              PNG or JPG up to 2MB. <span className="text-red-500">*</span>
+            </p>
           </div>
         </div>
         <div>
-          <Label htmlFor="e-name">Full name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-name">
+            Full name <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-name"
             placeholder="e.g. Jane Cooper"
@@ -579,7 +596,9 @@ function AddEmployeeModal({
           />
         </div>
         <div>
-          <Label htmlFor="e-email">Email <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-email">
+            Email <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-email"
             type="email"
@@ -595,7 +614,9 @@ function AddEmployeeModal({
           />
         </div>
         <div>
-          <Label htmlFor="e-phone">Phone <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-phone">
+            Phone <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-phone"
             placeholder="+1 555 000 0000"
@@ -610,7 +631,9 @@ function AddEmployeeModal({
           />
         </div>
         <div>
-          <Label>Department <span className="text-red-500">*</span></Label>
+          <Label>
+            Department <span className="text-red-500">*</span>
+          </Label>
           <Select
             value={formData.department}
             required
@@ -634,7 +657,9 @@ function AddEmployeeModal({
           </Select>
         </div>
         <div>
-          <Label htmlFor="e-role">Designation <span className="text-red-500">*</span></Label>
+          <Label htmlFor="e-role">
+            Designation <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="e-role"
             placeholder="e.g. Senior Product Designer"
@@ -649,7 +674,9 @@ function AddEmployeeModal({
           />
         </div>
         <div>
-          <Label>Status <span className="text-red-500">*</span></Label>
+          <Label>
+            Status <span className="text-red-500">*</span>
+          </Label>
           <Select
             value={formData.status}
             required
