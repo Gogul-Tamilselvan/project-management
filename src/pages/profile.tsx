@@ -165,22 +165,30 @@ export function ProfilePage() {
       data: { user: authUser },
     } = await connectSupabase.auth.getUser();
 
-    if (!authUser) return;
-
+    if (!authUser) {
+    setLoading(false);
+    return;
+  }
     const { data, error } = await connectSupabase
       .from("employee")
       .select("*")
       .eq("email", authUser.email)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error(error);
-    } else {
-      setUser(data);
+       setLoading(false);
+    return;
+    }  if (!data) {
+      toast.error("Your employee profile was not found.");
+    setUser(null);
+    setLoading(false);
+    return;
+  }
 
-      await fetchStats(data.id);
-    }
+  setUser(data);
 
+  await fetchStats(data.id);
     setLoading(false);
   };
 
