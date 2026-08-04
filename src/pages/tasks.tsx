@@ -489,6 +489,9 @@ function CreateTaskModal({
             value={projectDetail.dueDate}
             className="mt-1.5"
             onChange={(e) => setprojectDetail((prev) => ({ ...prev, dueDate: e.target.value }))}
+            onClick={(e)=>{
+              (e.currentTarget as HTMLInputElement).showPicker?.();
+            }}
           />
         </div>
       </form>

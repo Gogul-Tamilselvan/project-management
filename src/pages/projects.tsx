@@ -444,6 +444,9 @@ function CreateProjectModal({
             name="startDate"
             value={formData.startDate}
             onChange={handleChange}
+            onClick={(e) => {
+              (e.currentTarget as HTMLInputElement).showPicker?.();
+            }}
             readOnly={mode === "view"}
             required
           />
@@ -459,6 +462,10 @@ function CreateProjectModal({
             name="dueDate"
             value={formData.dueDate}
             onChange={handleChange}
+            onClick={(e) => {
+              (e.currentTarget as HTMLInputElement).showPicker?.();
+
+            }}
             readOnly={mode === "view"}
             required
           />
