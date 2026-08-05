@@ -129,7 +129,7 @@ export function DashboardPage() {
           </p>
         </div>
         <Button className="gap-1.5">
-          <Plus className="h-4 w-4" /> New project
+          <Plus className="h-4 w-4" /><Link to="/projects">New project</Link>
         </Button>
       </div>
 
