@@ -32,7 +32,7 @@ import { mockActivities } from "@/lib/mock/activities";
 import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials, relativeTime } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const activityIcon = {
   project_created: FolderKanban,
@@ -50,6 +50,13 @@ const activityTint = {
   project_updated: "bg-warning/20 text-warning-foreground",
 } as const;
 
+interface DashboardData {
+  totalprojectcount: number;
+  totalemployeecount: number;
+  pendingtaskcount: number;
+  completedtaskcount: number;
+}
+
 export function DashboardPage() {
   const totalProjects = mockProjects.length;
   const totalEmployees = mockEmployees.length;
@@ -65,7 +72,7 @@ export function DashboardPage() {
     .slice(0, 4);
 
   const getEmployeName = async () => {
-    const { data, error } = await connectSupabase.from("employee").select("emp_name");
+    const { data, error } = await connectSupabase.from("employee").select("name");
     if (error) {
       console.log(error.message);
     } else console.log(data);
@@ -82,6 +89,35 @@ export function DashboardPage() {
     getEmployeName();
     getProjectTitle();
   }, []);
+
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, []);
+
+  const fetchDashboardData = async () => {
+    const { count: totalProjects, error: projectError } = await connectSupabase.from("projects").select("*", { count: "exact", head: true });
+
+    const { count: totalEmployees, error: employeeError } = await connectSupabase.from("employee").select("*", { count: "exact", head: true });
+
+    const { count: pendingTasks, error: pendingError } = await connectSupabase.from("task").select("*", { count: "exact", head: true }).neq("status", "completed");
+
+    const { count: completedTasks, error: completedError } =await connectSupabase.from("task").select("*", { count: "exact", head: true }).eq("status", "completed");
+
+    if (projectError) console.log(projectError.message);
+    if (employeeError) console.log(employeeError.message);
+    if (pendingError) console.log(pendingError.message);
+    if (completedError) console.log(completedError.message);
+
+    setDashboardData({
+      totalprojectcount: totalProjects || 0,
+      totalemployeecount: totalEmployees || 0,
+      pendingtaskcount: pendingTasks || 0,
+      completedtaskcount: completedTasks || 0,
+    });
+  };
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
@@ -101,28 +137,28 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Total projects"
-          value={totalProjects}
+          value={dashboardData?.totalprojectcount}
           delta={{ value: "+2 this month", positive: true }}
           icon={FolderKanban}
           tint="primary"
         />
         <SummaryCard
           label="Total employees"
-          value={totalEmployees}
+          value={dashboardData?.totalemployeecount}
           delta={{ value: "+3 this quarter", positive: true }}
           icon={Users}
           tint="info"
         />
         <SummaryCard
           label="Pending tasks"
-          value={pendingTasks}
+          value={dashboardData?.pendingtaskcount}
           delta={{ value: "-4 vs last week", positive: true }}
           icon={Clock}
           tint="warning"
         />
         <SummaryCard
           label="Completed tasks"
-          value={completedTasks}
+          value={dashboardData?.completedtaskcount}
           delta={{ value: "+12% MoM", positive: true }}
           icon={CheckCircle2}
           tint="success"
