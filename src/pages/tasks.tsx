@@ -327,6 +327,19 @@ function CreateTaskModal({
     dueDate: "",
   });
 
+  const resetForm = () => {
+  setprojectDetail({
+    id: "",
+    title: "",
+    description: "",
+    projectId: "",
+    assigneeId: "",
+    priority: "low",
+    status: "in_progress",
+    dueDate: "",
+  });
+};
+
   const addTask = async () => {
     if (
       projectDetail.title != "" &&
@@ -372,9 +385,13 @@ function CreateTaskModal({
       description="Add a new task and assign it to a teammate."
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+         <Button variant="ghost" onClick={() => {
+         resetForm();
+         onOpenChange(false);
+  }}
+>
+  Cancel
+</Button>
           <Button type="submit" form="task-from" onClick={addTask}>
             Create task
           </Button>
@@ -510,8 +527,8 @@ function ViewTask({
 }) {
   return (
     <Modal
-      open={open}
-      onOpenChange={onOpenChange}
+  open={open}
+  onOpenChange={onOpenChange}
       title="View task"
       description="View task details and track its progress."
       footer={
