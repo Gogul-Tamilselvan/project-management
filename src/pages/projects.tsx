@@ -238,7 +238,7 @@ function CreateProjectModal({
     teamIds: string[];
   }
 
-  const [formData, setFormData] = useState<ProjectFormData>({
+  const initialFormData: ProjectFormData = {
     id: "",
     name: "",
     description: "",
@@ -247,9 +247,15 @@ function CreateProjectModal({
     startDate: "",
     dueDate: "",
     teamIds: [],
-  });
+  };
 
-  const [originalData, setOriginalData] = useState<ProjectFormData | null>(null);
+  const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
+  const [originalData, setOriginalData] = useState<ProjectFormData | null>(initialFormData);
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setOriginalData(initialFormData);
+  };
 
   useEffect(() => {
     if (editingProject) {
@@ -267,19 +273,9 @@ function CreateProjectModal({
       setFormData(projectData);
       setOriginalData(projectData);
     } else {
-      const emptyData = {
-        id: "",
-        name: "",
-        description: "",
-        status: "planning" as ProjectStatus,
-        progress: 0,
-        startDate: "",
-        dueDate: "",
-        teamIds: [],
-      };
 
-      setFormData(emptyData);
-      setOriginalData(emptyData);
+      setFormData(initialFormData);
+      setOriginalData(initialFormData);
     }
   }, [editingProject]);
 
@@ -316,9 +312,6 @@ function CreateProjectModal({
       } else toast.success("Project updated successfully");
     } else {
       // CREATE PROJECT
-      const {
-        data: { user },
-      } = await connectSupabase.auth.getUser();
 
       const { error } = await connectSupabase.from("projects").insert({
         project_name: formData.name,
@@ -338,16 +331,7 @@ function CreateProjectModal({
     onCreate();
 
     // Reset form
-    setFormData({
-      id: "",
-      name: "",
-      description: "",
-      status: "planning",
-      progress: 0,
-      startDate: "",
-      dueDate: "",
-      teamIds: [],
-    });
+    resetForm();
 
     resetModal();
 
@@ -360,6 +344,7 @@ function CreateProjectModal({
       open={open}
       onOpenChange={(value) => {
         if (!value) {
+          resetForm();
           resetModal();
         }
         onOpenChange(value);
@@ -383,6 +368,7 @@ function CreateProjectModal({
           <Button
             variant="ghost"
             onClick={() => {
+              resetForm();
               resetModal();
               onOpenChange(false);
             }}
