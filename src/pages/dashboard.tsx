@@ -62,10 +62,8 @@ export function DashboardPage() {
   const totalEmployees = mockEmployees.length;
   const pendingTasks = mockTasks.filter((t) => t.status !== "completed").length;
   const completedTasks = mockTasks.filter((t) => t.status === "completed").length;
+  const [recentProjects, setRecentProjects] = useState<any[]>([]);
 
-  const recentProjects = [...mockProjects]
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-    .slice(0, 5);
 
   const myTasks = mockTasks
     .filter((t) => t.assigneeId === mockCurrentUser.id || t.status !== "completed")
@@ -78,16 +76,33 @@ export function DashboardPage() {
     } else console.log(data);
   };
 
-  const getProjectTitle = async () => {
-    const { data, error } = await connectSupabase.from("projects").select("project_name");
+  const getRecentProjects = async () => {
+    const { data, error } = await connectSupabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
     if (error) {
-      console.log(error.message);
-    } else console.log(data);
+      console.log(error);
+      return;
+    }
+
+    const formattedProjects = data.map((item) => ({
+      id: item.id,
+      name: item.project_name,
+      description: item.description,
+      status: item.status,
+      progress: 0, 
+      dueDate: item.end_date,
+    }));
+
+    setRecentProjects(formattedProjects);
   };
 
   useEffect(() => {
     getEmployeName();
-    getProjectTitle();
+    getRecentProjects();
   }, []);
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -103,7 +118,7 @@ export function DashboardPage() {
 
     const { count: pendingTasks, error: pendingError } = await connectSupabase.from("task").select("*", { count: "exact", head: true }).neq("status", "completed");
 
-    const { count: completedTasks, error: completedError } =await connectSupabase.from("task").select("*", { count: "exact", head: true }).eq("status", "completed");
+    const { count: completedTasks, error: completedError } = await connectSupabase.from("task").select("*", { count: "exact", head: true }).eq("status", "completed");
 
     if (projectError) console.log(projectError.message);
     if (employeeError) console.log(employeeError.message);
