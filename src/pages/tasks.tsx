@@ -234,7 +234,7 @@ export function TasksPage() {
                         <PriorityPill priority={t.priority} />
                       </TableCell>
                       <TableCell>
-                        <TaskStatusBadge status={t.status} />
+                        <TaskStatusBadge status={t.status ?? ""} />
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
