@@ -39,20 +39,48 @@ export function ProjectsPage() {
     getProjects();
   }, []);
 
-  const handleDelete = async () => {
-    if (!selectedProject) return;
+ const handleDelete = async () => {
+  if (!selectedProject) return;
 
-    const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
+  // Check whether this project has assigned tasks
+  const { data: tasks, error: taskError } = await connectSupabase
+    .from("task")
+    .select("id")
+    .eq("projectId", selectedProject.id);
 
-    if (error) {
-      console.error(error);
-      return;
-    } else toast.success("Deleted successfully");
+  if (taskError) {
+    console.error("Task check error:", taskError);
+    toast.error("Unable to check project tasks");
+    return;
+  }
 
+  // Project has assigned tasks
+  if (tasks && tasks.length > 0) {
+    toast.error("Tasks assigned to this project");
+    
     setIsDeleteOpen(false);
     setSelectedProject(null);
-    getProjects();
-  };
+    return;
+  }
+  // Delete project if no tasks are assigned
+  const { error } = await connectSupabase
+    .from("projects")
+    .delete()
+    .eq("id", selectedProject.id);
+
+  if (error) {
+    console.error("Delete error:", error);
+    toast.error("Failed to delete project");
+    return;
+  }
+
+  toast.success("Project deleted successfully");
+
+  setIsDeleteOpen(false);
+  setSelectedProject(null);
+
+  getProjects();
+};
 
   const handleEdit = (project: Project) => {
     setMode("edit");
@@ -202,7 +230,7 @@ export function ProjectsPage() {
               </Button>
 
               <Button variant="destructive" onClick={handleDelete}>
-                Confirm Delete
+                Yes Delete
               </Button>
             </div>
           </div>
