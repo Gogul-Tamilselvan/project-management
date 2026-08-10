@@ -1,3 +1,7 @@
+
+
+
+
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/app-shell";
 import { DashboardPage } from "@/pages/dashboard";
@@ -11,6 +15,7 @@ import { SigninPage } from "./pages/signin";
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { connectSupabase } from "@/services/config";
+import KanbanBoard from "./components/kanban/kanban";
 
 function NotFoundPage() {
   return (
@@ -86,6 +91,7 @@ export function App() {
         }>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
+          <Route path="kanban/:projectId" element={<KanbanBoard />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="profile" element={<ProfilePage />} />

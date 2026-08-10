@@ -1,4 +1,4 @@
-export type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed";
+export type ProjectStatus = "todo" | "in_progress" | "review" | "completed";
 export type TaskStatus = "todo" | "in_progress" | "review" | "completed";
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type EmployeeStatus = "active" | "away" | "offline";

@@ -17,12 +17,13 @@ import { EmptyState } from "@/components/ui-kit/empty-state";
 import type { ProjectStatus, Project } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
-  { label: "In progress", value: "in_progress" },
-  { label: "Planning", value: "planning" },
-  { label: "On hold", value: "on_hold" },
+  { label: "In Progress", value: "in_progress" },
+  { label: "To Do", value: "todo" },
+  { label: "Review", value: "review" },
   { label: "Completed", value: "completed" },
 ];
 
@@ -39,48 +40,48 @@ export function ProjectsPage() {
     getProjects();
   }, []);
 
- const handleDelete = async () => {
-  if (!selectedProject) return;
+  const handleDelete = async () => {
+    if (!selectedProject) return;
 
-  // Check whether this project has assigned tasks
-  const { data: tasks, error: taskError } = await connectSupabase
-    .from("task")
-    .select("id")
-    .eq("projectId", selectedProject.id);
+    // Check whether this project has assigned tasks
+    const { data: tasks, error: taskError } = await connectSupabase
+      .from("task")
+      .select("id")
+      .eq("projectId", selectedProject.id);
 
-  if (taskError) {
-    console.error("Task check error:", taskError);
-    toast.error("Unable to check project tasks");
-    return;
-  }
+    if (taskError) {
+      console.error("Task check error:", taskError);
+      toast.error("Unable to check project tasks");
+      return;
+    }
 
-  // Project has assigned tasks
-  if (tasks && tasks.length > 0) {
-    toast.error("Tasks assigned to this project");
-    
+    // Project has assigned tasks
+    if (tasks && tasks.length > 0) {
+      toast.error("Tasks assigned to this project");
+
+      setIsDeleteOpen(false);
+      setSelectedProject(null);
+      return;
+    }
+    // Delete project if no tasks are assigned
+    const { error } = await connectSupabase
+      .from("projects")
+      .delete()
+      .eq("id", selectedProject.id);
+
+    if (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete project");
+      return;
+    }
+
+    toast.success("Project deleted successfully");
+
     setIsDeleteOpen(false);
     setSelectedProject(null);
-    return;
-  }
-  // Delete project if no tasks are assigned
-  const { error } = await connectSupabase
-    .from("projects")
-    .delete()
-    .eq("id", selectedProject.id);
 
-  if (error) {
-    console.error("Delete error:", error);
-    toast.error("Failed to delete project");
-    return;
-  }
-
-  toast.success("Project deleted successfully");
-
-  setIsDeleteOpen(false);
-  setSelectedProject(null);
-
-  getProjects();
-};
+    getProjects();
+  };
 
   const handleEdit = (project: Project) => {
     setMode("edit");
@@ -88,10 +89,9 @@ export function ProjectsPage() {
     setOpen(true);
   };
 
+  const navigate = useNavigate();
   const handleView = (project: Project) => {
-    setMode("view");
-    setEditingProject(project);
-    setOpen(true);
+    navigate(`/kanban/${project.id}`);
   };
 
   const getProjects = async () => {
@@ -195,6 +195,7 @@ export function ProjectsPage() {
                 setIsDeleteOpen(true);
               }}
               onView={handleView}
+
             />
           ))}
         </div>
@@ -501,9 +502,9 @@ function CreateProjectModal({
             </SelectTrigger>
 
             <SelectContent>
-              <SelectItem value="planning">Planning</SelectItem>
-              <SelectItem value="in_progress">In progress</SelectItem>
-              <SelectItem value="on_hold">On hold</SelectItem>
+              <SelectItem value="todo">To Do</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="review">Review</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
