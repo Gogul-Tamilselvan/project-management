@@ -40,7 +40,6 @@ import { initials } from "@/lib/format";
 import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
-import { getTasks } from "@/lib/data";
 
 export function EmployeesPage() {
   const [open, setOpen] = useState<boolean>(false);
@@ -193,7 +192,6 @@ export function EmployeesPage() {
         title="Employee Profile"
         description="Review and manage employee records, details, and status."
       >
-        {/* <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2"> */}
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
           <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
             <AvatarImage

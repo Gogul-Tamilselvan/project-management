@@ -5,9 +5,9 @@ const base =
   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset";
 
 const projectMap: Record<ProjectStatus, { label: string; cls: string }> = {
-  planning: { label: "Planning", cls: "bg-muted text-muted-foreground ring-border" },
+  todo: { label: "To do", cls: "bg-muted text-muted-foreground ring-border" },
   in_progress: { label: "In progress", cls: "bg-primary-soft text-primary ring-primary/20" },
-  on_hold: { label: "On hold", cls: "bg-warning/15 text-warning-foreground ring-warning/30" },
+  review: { label: "In review", cls: "bg-warning/15 text-warning-foreground ring-warning/30" },
   completed: { label: "Completed", cls: "bg-success/15 text-success ring-success/25" },
 };
 

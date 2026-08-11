@@ -25,9 +25,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockProjects } from "@/lib/mock/projects";
 import { mockTasks } from "@/lib/mock/tasks";
-import { mockEmployees, mockCurrentUser } from "@/lib/mock/employees";
+import { mockCurrentUser } from "@/lib/mock/employees";
 import { mockActivities } from "@/lib/mock/activities";
 import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials, relativeTime } from "@/lib/format";
@@ -58,10 +57,7 @@ interface DashboardData {
 }
 
 export function DashboardPage() {
-  const totalProjects = mockProjects.length;
-  const totalEmployees = mockEmployees.length;
-  const pendingTasks = mockTasks.filter((t) => t.status !== "completed").length;
-  const completedTasks = mockTasks.filter((t) => t.status === "completed").length;
+
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
 
 
@@ -152,28 +148,28 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Total projects"
-          value={dashboardData?.totalprojectcount}
+          value={dashboardData?.totalprojectcount ?? 0}
           delta={{ value: "+2 this month", positive: true }}
           icon={FolderKanban}
           tint="primary"
         />
         <SummaryCard
           label="Total employees"
-          value={dashboardData?.totalemployeecount}
+          value={dashboardData?.totalemployeecount ?? 0 }
           delta={{ value: "+3 this quarter", positive: true }}
           icon={Users}
           tint="info"
         />
         <SummaryCard
           label="Pending tasks"
-          value={dashboardData?.pendingtaskcount}
+          value={dashboardData?.pendingtaskcount ?? 0 }
           delta={{ value: "-4 vs last week", positive: true }}
           icon={Clock}
           tint="warning"
         />
         <SummaryCard
           label="Completed tasks"
-          value={dashboardData?.completedtaskcount}
+          value={dashboardData?.completedtaskcount ?? 0 }
           delta={{ value: "+12% MoM", positive: true }}
           icon={CheckCircle2}
           tint="success"

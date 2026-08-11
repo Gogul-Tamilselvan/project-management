@@ -36,6 +36,7 @@ export function ProjectsPage() {
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  
   useEffect(() => {
     getProjects();
   }, []);
@@ -195,7 +196,6 @@ export function ProjectsPage() {
                 setIsDeleteOpen(true);
               }}
               onView={handleView}
-
             />
           ))}
         </div>
@@ -271,7 +271,7 @@ function CreateProjectModal({
     id: "",
     name: "",
     description: "",
-    status: "planning",
+    status: "todo",
     progress: 0,
     startDate: "",
     dueDate: "",
