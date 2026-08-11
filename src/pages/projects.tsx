@@ -27,6 +27,20 @@ const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "Completed", value: "completed" },
 ];
 
+const getProgressByStatus = (status: ProjectStatus): number => {
+  switch (status) {
+    case "todo":
+      return 0;
+    case "in_progress":
+      return 50;
+    case "review":
+      return 75;
+    case "completed":
+      return 100;
+    default:
+      return 0;
+  }
+};
 export function ProjectsPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -111,7 +125,7 @@ export function ProjectsPage() {
       name: item.project_name,
       description: item.description,
       status: item.status,
-      progress: 0,
+      progress: getProgressByStatus(item.status),
       startDate: item.start_date,
       dueDate: item.end_date,
       teamIds: [],
@@ -173,6 +187,8 @@ export function ProjectsPage() {
               {f.label}
             </button>
           ))}
+
+          
         </div>
       </div>
 

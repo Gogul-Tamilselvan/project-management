@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui-kit/modal";
 import { EmployeeStatusBadge } from "@/components/ui-kit/status-badges";
 import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
-import { Employee, EmployeeStatus } from "@/lib/types";
+import { Employee } from "@/lib/types";
 import { toast } from "sonner";
 
 

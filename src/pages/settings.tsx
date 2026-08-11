@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export function SettingsPage() {
-  const [workspaceName, setWorkspaceName] = useState("Plane HQ");
-  const [workspaceUrl, setWorkspaceUrl] = useState("plane.app/hq");
+  const [workspaceName, setWorkspaceName] = useState<string>("");
+  const [workspaceUrl, setWorkspaceUrl] = useState<string>("");
 
   const [compactMode, setCompactMode] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -20,18 +21,8 @@ export function SettingsPage() {
   const [twoFactor, setTwoFactor] = useState(false);
 
   const handleCancel = () => {
-    setWorkspaceName("Plane HQ");
-    setWorkspaceUrl("plane.app/hq");
-
-    setCompactMode(false);
-    setReduceMotion(false);
-
-    setEmailNotifications(true);
-    setPushNotifications(true);
-    setWeeklyDigest(false);
-
-    setTwoFactor(false);
-  };
+  loadSettings();
+};
 
   const loadSettings = async () => {
     const { data, error } = await connectSupabase
@@ -101,7 +92,7 @@ export function SettingsPage() {
       return;
     }
 
-    alert("Settings saved successfully");
+    toast.success("Settings saved successfully");
   };
 
   return (

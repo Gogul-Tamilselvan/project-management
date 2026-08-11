@@ -89,13 +89,27 @@ export function DashboardPage() {
       name: item.project_name,
       description: item.description,
       status: item.status,
-      progress: 0, 
+      progress: getProgressByStatus(item.status),
       dueDate: item.end_date,
     }));
 
     setRecentProjects(formattedProjects);
   };
 
+  const getProgressByStatus = (status: string): number => {
+  switch (status) {
+    case "todo":
+      return 0;
+    case "in_progress":
+      return 50;
+    case "review":
+      return 75;
+    case "completed":
+      return 100;
+    default:
+      return 0;
+  }
+};
   useEffect(() => {
     getEmployeName();
     getRecentProjects();
