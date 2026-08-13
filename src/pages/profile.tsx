@@ -11,7 +11,6 @@ import { connectSupabase } from "@/services/config";
 import { Employee } from "@/lib/types";
 import { toast } from "sonner";
 
-
 export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
@@ -68,7 +67,7 @@ export function ProfilePage() {
 
     // Close the modal
     setEditOpen(false);
-     setIsEdited(false);
+    setIsEdited(false);
     // Optional success message
     toast.success("Profile updated successfully");
 
@@ -77,10 +76,7 @@ export function ProfilePage() {
   };
 
   const fetchStats = async (employeeId: string) => {
-    const { data, error } = await connectSupabase.rpc(
-      "get_employee_stats",
-      { emp_id: employeeId }
-    );
+    const { data, error } = await connectSupabase.rpc("get_employee_stats", { emp_id: employeeId });
 
     if (error) {
       console.error(error);
@@ -146,7 +142,7 @@ export function ProfilePage() {
     }
 
     toast.success("Password updated successfully");
-  setIsPasswordEdited(false);
+    setIsPasswordEdited(false);
 
     setPasswordData({
       currentPassword: "",
@@ -166,9 +162,9 @@ export function ProfilePage() {
     } = await connectSupabase.auth.getUser();
 
     if (!authUser) {
-    setLoading(false);
-    return;
-  }
+      setLoading(false);
+      return;
+    }
     const { data, error } = await connectSupabase
       .from("employee")
       .select("*")
@@ -177,18 +173,19 @@ export function ProfilePage() {
 
     if (error) {
       console.error(error);
-       setLoading(false);
-    return;
-    }  if (!data) {
+      setLoading(false);
+      return;
+    }
+    if (!data) {
       toast.error("Your employee profile was not found.");
-    setUser(null);
-    setLoading(false);
-    return;
-  }
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-  setUser(data);
+    setUser(data);
 
-  await fetchStats(data.id);
+    await fetchStats(data.id);
     setLoading(false);
   };
 
@@ -227,13 +224,13 @@ export function ProfilePage() {
         <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
-              <AvatarImage src={
-                  connectSupabase.storage
-                    .from("Employee")
-                    .getPublicUrl(user?.avatarUrl ?? "").data.publicUrl
+              <AvatarImage
+                src={
+                  connectSupabase.storage.from("Employee").getPublicUrl(user?.avatarUrl ?? "").data
+                    .publicUrl
                 }
                 alt={user?.name ?? ""}
-              /> 
+              />
               <AvatarFallback className="text-2xl">{initials(user?.name ?? "")}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
@@ -259,15 +256,16 @@ export function ProfilePage() {
                 <Button
                   size="sm"
                   variant="secondary"
-                onClick={() => { setPasswordData({
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-  });
+                  onClick={() => {
+                    setPasswordData({
+                      currentPassword: "",
+                      newPassword: "",
+                      confirmPassword: "",
+                    });
 
-  setIsPasswordEdited(false);
-  setPwOpen(true);
-}}
+                    setIsPasswordEdited(false);
+                    setPwOpen(true);
+                  }}
                   className="gap-1.5"
                 >
                   <KeyRound className="h-3.5 w-3.5" /> Change password
@@ -301,9 +299,9 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-           <Button disabled={!isEdited} onClick={updateProfile}>
-           Save changes
-           </Button>
+            <Button disabled={!isEdited} onClick={updateProfile}>
+              Save changes
+            </Button>
           </>
         }
       >
@@ -316,12 +314,12 @@ export function ProfilePage() {
             <Input
               id="pr-name"
               value={formData.name}
-              onChange={(e) =>{
-             setIsEdited(true);
+              onChange={(e) => {
+                setIsEdited(true);
                 setFormData({
                   ...formData,
                   name: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -331,13 +329,13 @@ export function ProfilePage() {
             <Input
               id="pr-email"
               value={formData.email}
-              onChange={(e) =>{
-                 setIsEdited(true)
-              
+              onChange={(e) => {
+                setIsEdited(true);
+
                 setFormData({
                   ...formData,
                   email: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -347,12 +345,12 @@ export function ProfilePage() {
             <Input
               id="pr-phone"
               value={formData.phone}
-              onChange={(e) =>{
-                 setIsEdited(true)
+              onChange={(e) => {
+                setIsEdited(true);
                 setFormData({
                   ...formData,
                   phone: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -362,12 +360,12 @@ export function ProfilePage() {
             <Input
               id="pr-dept"
               value={formData.department}
-              onChange={(e) =>{
-                 setIsEdited(true);
+              onChange={(e) => {
+                setIsEdited(true);
                 setFormData({
                   ...formData,
                   department: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -377,12 +375,12 @@ export function ProfilePage() {
             <Input
               id="pr-role"
               value={formData.role}
-              onChange={(e) =>{
-                 setIsEdited(true);
+              onChange={(e) => {
+                setIsEdited(true);
                 setFormData({
                   ...formData,
                   role: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -399,12 +397,9 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setPwOpen(false)}>
               Cancel
             </Button>
-            <Button
-  disabled={!isPasswordEdited}
-  onClick={changePassword}
->
-  Update password
-</Button>
+            <Button disabled={!isPasswordEdited} onClick={changePassword}>
+              Update password
+            </Button>
           </>
         }
       >
@@ -415,12 +410,12 @@ export function ProfilePage() {
               id="pw-current"
               type="password"
               value={passwordData.currentPassword}
-              onChange={(e) =>{
-                  setIsPasswordEdited(true);
+              onChange={(e) => {
+                setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   currentPassword: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -431,12 +426,12 @@ export function ProfilePage() {
               id="pw-new"
               type="password"
               value={passwordData.newPassword}
-              onChange={(e) =>{
-     setIsPasswordEdited(true);
+              onChange={(e) => {
+                setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   newPassword: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />
@@ -447,12 +442,12 @@ export function ProfilePage() {
               id="pw-confirm"
               type="password"
               value={passwordData.confirmPassword}
-              onChange={(e) =>{
-                 setIsPasswordEdited(true);
+              onChange={(e) => {
+                setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   confirmPassword: e.target.value,
-                })
+                });
               }}
               className="mt-1.5"
             />

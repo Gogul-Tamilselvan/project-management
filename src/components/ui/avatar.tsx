@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 
@@ -44,4 +42,29 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export { Avatar, AvatarImage, AvatarFallback };
+const AvatarGroup = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("flex -space-x-2 [&>div]:ring-2 [&>div]:ring-background", className)}
+      {...props}
+    />
+  ),
+);
+AvatarGroup.displayName = "AvatarGroup";
+
+const AvatarGroupCount = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium ring-2 ring-background",
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
+AvatarGroupCount.displayName = "AvatarGroupCount";
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarGroup, AvatarGroupCount };
