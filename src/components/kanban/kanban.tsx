@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus } from "@/lib/types";
 import { formatShortDate, initials } from "@/lib/format";
-import { Calendar } from "../ui/calendar";
+import { fi } from "date-fns/locale";
 
 interface KanbanTask {
   id: string;
@@ -48,18 +48,73 @@ const columns: {
   },
 ];
 
+const dummyEmp = [
+  {
+    id: "EMP001",
+    name: "Arun Kumar",
+    avatarUrl: "https://i.pravatar.cc/150?img=1",
+  },
+  {
+    id: "EMP002",
+    name: "Priya Sharma",
+    avatarUrl: "https://i.pravatar.cc/150?img=2",
+  },
+  {
+    id: "EMP003",
+    name: "Rahul Singh",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+  },
+  {
+    id: "EMP004",
+    name: "Ananya Patel",
+    avatarUrl: "https://i.pravatar.cc/150?img=4",
+  },
+  {
+    id: "EMP005",
+    name: "Vikram Reddy",
+    avatarUrl: "https://i.pravatar.cc/150?img=5",
+  },
+  {
+    id: "EMP006",
+    name: "Meera Nair",
+    avatarUrl: "https://i.pravatar.cc/150?img=6",
+  },
+  {
+    id: "EMP007",
+    name: "Karthik Raj",
+    avatarUrl: "https://i.pravatar.cc/150?img=7",
+  },
+  {
+    id: "EMP008",
+    name: "Divya Iyer",
+    avatarUrl: "https://i.pravatar.cc/150?img=8",
+  },
+  {
+    id: "EMP009",
+    name: "Sanjay Verma",
+    avatarUrl: "https://i.pravatar.cc/150?img=9",
+  },
+  {
+    id: "EMP010",
+    name: "Neha Kapoor",
+    avatarUrl: "https://i.pravatar.cc/150?img=10",
+  },
+];
+
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isTimesheetOpen, setIsTimesheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+  const [selectedEmp, setselectedEmp] = useState<string>("");
 
   const [taskDescription, setTaskDescription] = useState("");
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
   const [timesheets, setTimesheets] = useState<any[]>([]);
   const [editingTimesheet, setEditingTimesheet] = useState<any | null>(null);
+  console.log("task: ", tasks);
 
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
 
@@ -109,19 +164,6 @@ export default function KanbanBoard() {
     }
   };
 
-  // const fetchEmployees = async () => {
-  //   const { data, error } = await connectSupabase.from("employee").select("id, name");
-
-  //   if (error) {
-  //     console.error("Error fetching employees:", error);
-  //     return;
-  //   }
-
-  //   console.log("Employees:", data);
-
-  //   setEmployees(data || []);
-  // };
-
   const fetchTimesheets = async () => {
     const { data, error } = await connectSupabase
       .from("timesheets")
@@ -134,16 +176,6 @@ export default function KanbanBoard() {
       setTimesheets(data);
     }
   };
-
-  // const getAssigneeName = (assigneeId?: string) => {
-  //   if (!assigneeId) {
-  //     return "Unassigned";
-  //   }
-
-  //   const employee = employees.find((employee) => employee.id === assigneeId);
-
-  //   return employee?.name || "Unknown";
-  // };
 
   const handleDragStart = (task: KanbanTask) => {
     setDraggedTask(task);
@@ -286,6 +318,13 @@ export default function KanbanBoard() {
     setIsTimesheetOpen(true);
   };
 
+  const filterEmployee = (id?: string) => {
+    if (!id) return tasks;
+    return tasks.filter((v) => v.employee.id === id);
+  };
+
+  // console.log(filterEmployee("5cee5ea8-3e98-4630-97ed-2c52a7f3982d"));
+
   // Loading
   if (loading) {
     return (
@@ -311,26 +350,43 @@ export default function KanbanBoard() {
           <p className="mt-1 text-sm text-slate-500">Manage and track tasks for this project</p>
         </div>
         <div className="flex m-2">
-          <AvatarGroup>
-            {employees.map((v, idx) => (
-              <Avatar className="h-7 w-7" key={idx}>
-                <AvatarImage
-                  src={
-                    connectSupabase.storage.from("Employee").getPublicUrl(v.avatarUrl ?? "").data
-                      .publicUrl
-                  }
-                />
-                <AvatarFallback>{v.name}</AvatarFallback>
-              </Avatar>
-            ))}
-            <AvatarGroupCount>+2</AvatarGroupCount>
-          </AvatarGroup>
+          {tasks.map((v) => (
+            <Avatar
+              className="h-7 w-7 cursor-pointer"
+              key={v.id}
+              onClick={() => setselectedEmp(v.employee.id)}
+            >
+              <AvatarImage
+              // src={
+              //   connectSupabase.storage.from("Employee").getPublicUrl(v.employee.avatarUrl ?? "")
+              //     .data.publicUrl
+              // }
+              />
+              <AvatarFallback>{initials(v.employee.name ?? "E")}</AvatarFallback>
+            </Avatar>
+          ))}
+          {/* <AvatarGroup> */}
+          {/* {dummyEmp.map((v, idx) => (
+            <Avatar className="h-7 w-7" key={idx}>
+              <AvatarImage
+              // src={
+              //   connectSupabase.storage.from("Employee").getPublicUrl(v.avatarUrl ?? "").data
+              //     .publicUrl
+              // }
+              />
+              <AvatarFallback>{initials(v.name)}</AvatarFallback>
+            </Avatar>
+          ))} */}
+          {/* <AvatarGroupCount>+2</AvatarGroupCount> */}
+          {/* </AvatarGroup> */}
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         {columns.map((column) => {
-          const columnTasks = tasks.filter((task) => task.status === column.id);
+          const columnTasks = filterEmployee(selectedEmp).filter(
+            (task) => task.status === column.id,
+          );
           const columnStyles = {
             todo: {
               header: "text-blue-600",
