@@ -47,62 +47,8 @@ const columns: {
   },
 ];
 
-const dummyEmp = [
-  {
-    id: "EMP001",
-    name: "Arun Kumar",
-    avatarUrl: "https://i.pravatar.cc/150?img=1",
-  },
-  {
-    id: "EMP002",
-    name: "Priya Sharma",
-    avatarUrl: "https://i.pravatar.cc/150?img=2",
-  },
-  {
-    id: "EMP003",
-    name: "Rahul Singh",
-    avatarUrl: "https://i.pravatar.cc/150?img=3",
-  },
-  {
-    id: "EMP004",
-    name: "Ananya Patel",
-    avatarUrl: "https://i.pravatar.cc/150?img=4",
-  },
-  {
-    id: "EMP005",
-    name: "Vikram Reddy",
-    avatarUrl: "https://i.pravatar.cc/150?img=5",
-  },
-  {
-    id: "EMP006",
-    name: "Meera Nair",
-    avatarUrl: "https://i.pravatar.cc/150?img=6",
-  },
-  {
-    id: "EMP007",
-    name: "Karthik Raj",
-    avatarUrl: "https://i.pravatar.cc/150?img=7",
-  },
-  {
-    id: "EMP008",
-    name: "Divya Iyer",
-    avatarUrl: "https://i.pravatar.cc/150?img=8",
-  },
-  {
-    id: "EMP009",
-    name: "Sanjay Verma",
-    avatarUrl: "https://i.pravatar.cc/150?img=9",
-  },
-  {
-    id: "EMP010",
-    name: "Neha Kapoor",
-    avatarUrl: "https://i.pravatar.cc/150?img=10",
-  },
-];
-
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isTimesheetOpen, setIsTimesheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
@@ -122,16 +68,6 @@ export default function KanbanBoard() {
     projectId: string;
   }>();
 
-  useEffect(() => {
-    if (projectId) {
-      fetchTasks();
-      // fetchEmployees();
-      fetchTimesheets();
-      checkUserRole();
-    } else {
-      setLoading(false);
-    }
-  }, [projectId]);
 const checkUserRole = async () => {
   try {
     const {
@@ -188,8 +124,6 @@ const checkUserRole = async () => {
         .from("task")
         .select("*,employee(id,name,avatarUrl)")
         .eq("projectId", projectId);
-     
-      setEmployees(data?.map((v) => v.employee) ?? []);
 
       if (error) {
         console.error("Error fetching tasks:", error);
