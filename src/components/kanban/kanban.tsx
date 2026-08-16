@@ -307,6 +307,11 @@ const checkUserRole = async () => {
     return;
   }
 
+  const successMessage =
+    status === "approved"
+      ? "Timesheet approved successfully"
+      : "Timesheet rejected successfully - task moved back to Review";
+
   const {
     data: { user },
   } = await connectSupabase.auth.getUser();
@@ -331,13 +336,28 @@ const checkUserRole = async () => {
     return;
   }
 
-  toast.success(
-    status === "approved"
-      ? "Timesheet approved successfully"
-      : "Timesheet rejected successfully",
-  );
+    // If rejected, move the related task back to "review"
+  if (status === "rejected") {
+    const relatedTimesheet = timesheets.find((t) => t.id === timesheetId);
+    const taskId = relatedTimesheet?.task_id;
+
+    if (taskId) {
+      const { error: taskError } = await connectSupabase
+        .from("task")
+        .update({ status: "review" })
+        .eq("id", taskId);
+
+      if (taskError) {
+        console.error("Task status update error:", taskError);
+        toast.error("Timesheet rejected, but failed to move task back to Review");
+      } 
+    }
+  }
+
+  toast.success(successMessage);
 
   fetchTimesheets();
+  fetchTasks();
 };
   const handleEditTimesheet = (item: any) => {
     const relatedTask = getTaskById(item.task_id);
@@ -501,8 +521,8 @@ const checkUserRole = async () => {
                   columnTasks.map((task) => (
                     <div
                       key={task.id}
-                      draggable
-                      onDragStart={() => handleDragStart(task)}
+                      draggable = {task.status !== "completed"}
+                      onDragStart={() => task.status !== "completed" && handleDragStart(task)}
                       onDragEnd={() => setDraggedTask(null)}
                       className="
                                              group cursor-grab
@@ -750,61 +770,94 @@ const checkUserRole = async () => {
             </div>
 
             {/* Mobile stacked cards (hidden on sm and up) */}
-            <div className="space-y-3 sm:hidden">
-              {projectTimesheets.length === 0 ? (
-                <div className="rounded-lg border border-slate-100 px-4 py-8 text-center text-sm text-slate-400">
-                  No timesheet entries yet.
-                </div>
-              ) : (
-                projectTimesheets.map((item) => {
-                  const relatedTask = getTaskById(item.task_id);
-                  const hour = Math.floor(item.time_duration / 60);
-                  const minute = item.time_duration % 60;
+          <div className="space-y-3 sm:hidden">
+            {projectTimesheets.length === 0 ? (
+              <div className="rounded-lg border border-slate-100 px-4 py-8 text-center text-sm text-slate-400">
+                No timesheet entries yet.
+              </div>
+            ) : (
+              projectTimesheets.map((item) => {
+                const relatedTask = getTaskById(item.task_id);
+                const hour = Math.floor(item.time_duration / 60);
+                const minute = item.time_duration % 60;
 
-                  return (
-                    <div key={item.id} className="rounded-lg border border-slate-100 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">
-                            {item.task_description}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {new Date(item.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-
-                        <div className="flex shrink-0 gap-2">
-                          <button
-                            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
-                            onClick={() => handleEditTimesheet(item)}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
-                            onClick={() => handleDeleteTimesheet(item.id)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                return (
+                  <div key={item.id} className="rounded-lg border border-slate-100 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">
+                          {item.task_description}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </p>
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                        <span className="font-medium text-slate-900">
-                          {hour}h {minute}m
-                        </span>
-
-                        {relatedTask ? (
-                          <span className="text-slate-600">{relatedTask.title}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
+                          onClick={() => handleEditTimesheet(item)}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
+                          onClick={() => handleDeleteTimesheet(item.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+                      <span className="font-medium text-slate-900">
+                        {hour}h {minute}m
+                      </span>
+
+                      {relatedTask ? (
+                        <span className="text-slate-600">{relatedTask.title}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      {item.approval_status === "approved" ? (
+                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                          Approved
+                        </span>
+                      ) : item.approval_status === "rejected" ? (
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                          Rejected
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                          Pending
+                        </span>
+                      )}
+
+                      {isTL && item.approval_status === "pending" && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleTimesheetApproval(item.id, "approved")}
+                            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleTimesheetApproval(item.id, "rejected")}
+                            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
           </div>
 
           <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50 p-6 text-center sm:p-8">
