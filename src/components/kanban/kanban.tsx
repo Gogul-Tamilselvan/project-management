@@ -62,7 +62,8 @@ export default function KanbanBoard() {
   const [editingTimesheet, setEditingTimesheet] = useState<any | null>(null);
 
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
-
+  const [isChanged, setIsChanged] = useState(false);
+  const [isTL, setIsTL] = useState(false);
   const { projectId } = useParams<{
     projectId: string;
   }>();
@@ -72,10 +73,58 @@ export default function KanbanBoard() {
       fetchTasks();
       // fetchEmployees();
       fetchTimesheets();
+      checkUserRole();
     } else {
       setLoading(false);
     }
   }, [projectId]);
+const checkUserRole = async () => {
+  try {
+    const {
+      data: { user },
+    } = await connectSupabase.auth.getUser();
+
+    if (!user) {
+      setIsTL(false);
+      return;
+    }
+
+    const { data: employeesData, error } = await connectSupabase
+      .from("employee")
+      .select("id, email, role");
+
+
+    if (error) {
+      console.error("Role fetch error:", error);
+      setIsTL(false);
+      return;
+    }
+
+    console.log("EMPLOYEE DETAILS:",
+      employeesData?.map((emp) => ({
+        id: emp.id,
+        email: emp.email,
+        role: emp.role,
+      }))
+    );
+
+    const employee = employeesData?.find(
+      (emp) =>
+        emp.email?.toLowerCase() === user.email?.toLowerCase()
+    );
+
+    if (!employee) {
+      console.log("No employee record found for this user");
+      setIsTL(false);
+      return;
+    }
+
+    setIsTL(employee.role?.toLowerCase() === "tl");
+  } catch (error) {
+    console.error("Unexpected role error:", error);
+    setIsTL(false);
+  }
+};
 
   const fetchTasks = async () => {
     try {
@@ -85,11 +134,7 @@ export default function KanbanBoard() {
         .from("task")
         .select("*,employee(id,name,avatarUrl)")
         .eq("projectId", projectId);
-      console.log("first", data);
-      console.log(
-        "emp: ",
-        data?.map((v) => v.employee),
-      );
+     
       setEmployees(data?.map((v) => v.employee) ?? []);
 
       if (error) {
@@ -97,9 +142,6 @@ export default function KanbanBoard() {
         return;
       }
 
-      console.log("Selected project ID:", projectId);
-
-      console.log("Project tasks:", data);
 
       setTasks(data || []);
     } catch (error) {
@@ -236,11 +278,12 @@ export default function KanbanBoard() {
     } else {
       // CREATE new entry
       const { error } = await connectSupabase.from("timesheets").insert({
-        task_id: selectedTask.id,
-        task_description: taskDescription,
-        time_duration: totalMinutes,
-      });
-
+  task_id: selectedTask.id,
+  task_description: taskDescription,
+  time_duration: totalMinutes,
+  approval_status: "pending",
+});
+       
       if (error) {
         console.error("Insert error:", error);
         toast.error("Failed to add timesheet entry");
@@ -254,6 +297,7 @@ export default function KanbanBoard() {
 
     setIsTimesheetOpen(false);
     setEditingTimesheet(null);
+    
   };
 
   const handleDeleteTimesheet = async (timesheetId: string) => {
@@ -274,7 +318,48 @@ export default function KanbanBoard() {
 
     fetchTimesheets();
   };
+  
+  const handleTimesheetApproval = async (
+  timesheetId: string,
+  status: "approved" | "rejected",
+) => {
+  if (!isTL) {
+    toast.error("Only TL can approve or reject timesheets");
+    return;
+  }
 
+  const {
+    data: { user },
+  } = await connectSupabase.auth.getUser();
+
+  if (!user) {
+    toast.error("User not found");
+    return;
+  }
+
+  const { error } = await connectSupabase
+    .from("timesheets")
+    .update({
+      approval_status: status,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", timesheetId);
+
+  if (error) {
+    console.error("Approval error:", error);
+    toast.error(`Failed to ${status} timesheet`);
+    return;
+  }
+
+  toast.success(
+    status === "approved"
+      ? "Timesheet approved successfully"
+      : "Timesheet rejected successfully",
+  );
+
+  fetchTimesheets();
+};
   const handleEditTimesheet = (item: any) => {
     const relatedTask = getTaskById(item.task_id);
 
@@ -283,6 +368,7 @@ export default function KanbanBoard() {
     setTaskDescription(item.task_description);
     setHours(String(Math.floor(item.time_duration / 60)));
     setMinutes(String(item.time_duration % 60));
+    setIsChanged(false);
     setIsTimesheetOpen(true);
   };
 
@@ -550,14 +636,16 @@ export default function KanbanBoard() {
                     <th className="px-5 py-3 text-left font-semibold text-slate-600">
                       Task (Related)
                     </th>
+                    <th className="px-5 py-3 text-left font-semibold text-slate-600">Approval</th>
                     <th className="px-5 py-3 text-center font-semibold text-slate-600">Action</th>
                   </tr>
+
                 </thead>
 
                 <tbody>
                   {projectTimesheets.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
+                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
                         No timesheet entries yet.
                       </td>
                     </tr>
@@ -591,22 +679,65 @@ export default function KanbanBoard() {
                             )}
                           </td>
 
-                          <td className="px-5 py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
-                                onClick={() => handleEditTimesheet(item)}
-                              >
-                                <Pencil size={16} />
-                              </button>
-                              <button
-                                className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
-                                onClick={() => handleDeleteTimesheet(item.id)}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
+                       <td className="px-5 py-4">
+                   {item.approval_status === "approved" ? (
+                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                 Approved
+                  </span>
+                ) : item.approval_status === "rejected" ? (
+              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                    Rejected
+              </span>
+  ) : (
+    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+      Pending
+    </span>
+  )}
+</td>
+                         <td className="px-5 py-4">
+  <div className="flex items-center justify-center gap-2">
+
+    {/* Employee Edit */}
+    <button
+      className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
+      onClick={() => handleEditTimesheet(item)}
+    >
+      <Pencil size={16} />
+    </button>
+
+    {/* Employee Delete */}
+    <button
+      className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
+      onClick={() => handleDeleteTimesheet(item.id)}
+    >
+      <Trash2 size={16} />
+    </button>
+
+    {/* TL ONLY */}
+    {isTL && item.approval_status === "pending" && (
+      <>
+        <button
+          onClick={() =>
+            handleTimesheetApproval(item.id, "approved")
+          }
+          className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
+        >
+          Approve
+        </button>
+
+        <button
+          onClick={() =>
+            handleTimesheetApproval(item.id, "rejected")
+          }
+          className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+        >
+          Reject
+        </button>
+      </>
+    )}
+
+  </div>
+</td>
                         </tr>
                       );
                     })
@@ -708,7 +839,9 @@ export default function KanbanBoard() {
                 <textarea
                   rows={5}
                   value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
+                  onChange={(e) =>{ setTaskDescription(e.target.value)
+                  setIsChanged(true);
+                  }}
                   className="w-full rounded-lg border p-3"
                   placeholder="Enter task description..."
                 />
@@ -721,7 +854,9 @@ export default function KanbanBoard() {
                     type="number"
                     min={0}
                     value={hours}
-                    onChange={(e) => setHours(e.target.value)}
+                    onChange={(e) =>{ setHours(e.target.value)
+                          setIsChanged(true);
+                    }}
                     className="w-full rounded-lg border border-slate-200 p-3 focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. 2"
                   />
@@ -734,7 +869,9 @@ export default function KanbanBoard() {
                     min={0}
                     max={59}
                     value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
+                    onChange={(e) => {setMinutes(e.target.value)
+                     setIsChanged(true);
+                    }}
                     className="w-full rounded-lg border border-slate-200 p-3 focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. 30"
                   />
@@ -750,8 +887,13 @@ export default function KanbanBoard() {
                 </button>
                 <button
                   onClick={handleSaveTimesheet}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-white"
-                >
+                   disabled={!!editingTimesheet && !isChanged}
+                 className={`rounded-lg px-5 py-2 text-white ${
+                editingTimesheet && !isChanged
+                ? "cursor-not-allowed bg-gray-300"
+                : "bg-blue-600 hover:bg-blue-700"
+                     }`}
+                 >
                   {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
                 </button>
               </div>
