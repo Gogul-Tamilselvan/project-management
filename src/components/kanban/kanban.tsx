@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { connectSupabase } from "../../services/config";
 import { useParams } from "react-router-dom";
-import { Calendar1, CalendarDays, InfoIcon, Pencil, Trash2, X } from "lucide-react";
+import { CalendarDays, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus } from "@/lib/types";
 import { formatShortDate, initials } from "@/lib/format";
-import { fi } from "date-fns/locale";
 
 interface KanbanTask {
   id: string;
@@ -350,7 +349,7 @@ export default function KanbanBoard() {
           <p className="mt-1 text-sm text-slate-500">Manage and track tasks for this project</p>
         </div>
         <div className="flex m-2">
-          {tasks.map((v) => (
+          {tasks.slice(0, 3).map((v) => (
             <Avatar
               className="h-7 w-7 cursor-pointer"
               key={v.id}
@@ -377,7 +376,7 @@ export default function KanbanBoard() {
               <AvatarFallback>{initials(v.name)}</AvatarFallback>
             </Avatar>
           ))} */}
-          {/* <AvatarGroupCount>+2</AvatarGroupCount> */}
+          {tasks.length - 3 != 0 && <AvatarGroupCount>{tasks.length - 3}</AvatarGroupCount>}
           {/* </AvatarGroup> */}
         </div>
       </div>
