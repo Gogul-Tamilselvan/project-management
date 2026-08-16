@@ -47,8 +47,10 @@ const columns: {
   },
 ];
 
+
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isTimesheetOpen, setIsTimesheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
@@ -68,6 +70,16 @@ export default function KanbanBoard() {
     projectId: string;
   }>();
 
+  useEffect(() => {
+    if (projectId) {
+      fetchTasks();
+      // fetchEmployees();
+      fetchTimesheets();
+      checkUserRole();
+    } else {
+      setLoading(false);
+    }
+  }, [projectId]);
 const checkUserRole = async () => {
   try {
     const {
@@ -124,6 +136,8 @@ const checkUserRole = async () => {
         .from("task")
         .select("*,employee(id,name,avatarUrl)")
         .eq("projectId", projectId);
+     
+      setEmployees(data?.map((v) => v.employee) ?? []);
 
       if (error) {
         console.error("Error fetching tasks:", error);
