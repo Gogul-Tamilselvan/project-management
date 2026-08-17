@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus } from "@/lib/types";
 import { formatShortDate, initials } from "@/lib/format";
+import { Button } from "../ui/button";
 
 interface KanbanTask {
   id: string;
@@ -47,7 +48,6 @@ const columns: {
   },
 ];
 
-
 export default function KanbanBoard() {
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -80,53 +80,52 @@ export default function KanbanBoard() {
       setLoading(false);
     }
   }, [projectId]);
-const checkUserRole = async () => {
-  try {
-    const {
-      data: { user },
-    } = await connectSupabase.auth.getUser();
+  const checkUserRole = async () => {
+    try {
+      const {
+        data: { user },
+      } = await connectSupabase.auth.getUser();
 
-    if (!user) {
+      if (!user) {
+        setIsTL(false);
+        return;
+      }
+
+      const { data: employeesData, error } = await connectSupabase
+        .from("employee")
+        .select("id, email, role");
+
+      if (error) {
+        console.error("Role fetch error:", error);
+        setIsTL(false);
+        return;
+      }
+
+      // console.log(
+      //   "EMPLOYEE DETAILS:",
+      //   employeesData?.map((emp) => ({
+      //     id: emp.id,
+      //     email: emp.email,
+      //     role: emp.role,
+      //   })),
+      // );
+
+      const employee = employeesData?.find(
+        (emp) => emp.email?.toLowerCase() === user.email?.toLowerCase(),
+      );
+
+      if (!employee) {
+        console.log("No employee record found for this user");
+        setIsTL(false);
+        return;
+      }
+
+      setIsTL(employee.role?.toLowerCase() === "tl");
+    } catch (error) {
+      console.error("Unexpected role error:", error);
       setIsTL(false);
-      return;
     }
-
-    const { data: employeesData, error } = await connectSupabase
-      .from("employee")
-      .select("id, email, role");
-
-
-    if (error) {
-      console.error("Role fetch error:", error);
-      setIsTL(false);
-      return;
-    }
-
-    console.log("EMPLOYEE DETAILS:",
-      employeesData?.map((emp) => ({
-        id: emp.id,
-        email: emp.email,
-        role: emp.role,
-      }))
-    );
-
-    const employee = employeesData?.find(
-      (emp) =>
-        emp.email?.toLowerCase() === user.email?.toLowerCase()
-    );
-
-    if (!employee) {
-      console.log("No employee record found for this user");
-      setIsTL(false);
-      return;
-    }
-
-    setIsTL(employee.role?.toLowerCase() === "tl");
-  } catch (error) {
-    console.error("Unexpected role error:", error);
-    setIsTL(false);
-  }
-};
+  };
 
   const fetchTasks = async () => {
     try {
@@ -136,14 +135,18 @@ const checkUserRole = async () => {
         .from("task")
         .select("*,employee(id,name,avatarUrl)")
         .eq("projectId", projectId);
-     
-      setEmployees(data?.map((v) => v.employee) ?? []);
+
+      const empdata = new Map<string, Employee>();
+      data?.forEach((v) => empdata.set(v.employee.id, v.employee));
+
+      // console.log("uni: ", Array.from(empdata.values()));
+
+      setEmployees(Array.from(empdata.values()));
 
       if (error) {
         console.error("Error fetching tasks:", error);
         return;
       }
-
 
       setTasks(data || []);
     } catch (error) {
@@ -257,12 +260,12 @@ const checkUserRole = async () => {
     } else {
       // CREATE new entry
       const { error } = await connectSupabase.from("timesheets").insert({
-  task_id: selectedTask.id,
-  task_description: taskDescription,
-  time_duration: totalMinutes,
-  approval_status: "pending",
-});
-       
+        task_id: selectedTask.id,
+        task_description: taskDescription,
+        time_duration: totalMinutes,
+        approval_status: "pending",
+      });
+
       if (error) {
         console.error("Insert error:", error);
         toast.error("Failed to add timesheet entry");
@@ -276,7 +279,6 @@ const checkUserRole = async () => {
 
     setIsTimesheetOpen(false);
     setEditingTimesheet(null);
-    
   };
 
   const handleDeleteTimesheet = async (timesheetId: string) => {
@@ -297,68 +299,65 @@ const checkUserRole = async () => {
 
     fetchTimesheets();
   };
-  
-  const handleTimesheetApproval = async (
-  timesheetId: string,
-  status: "approved" | "rejected",
-) => {
-  if (!isTL) {
-    toast.error("Only TL can approve or reject timesheets");
-    return;
-  }
 
-  const successMessage =
-    status === "approved"
-      ? "Timesheet approved successfully"
-      : "Timesheet rejected successfully - task moved back to Review";
+  const handleTimesheetApproval = async (timesheetId: string, status: "approved" | "rejected") => {
+    if (!isTL) {
+      toast.error("Only TL can approve or reject timesheets");
+      return;
+    }
 
-  const {
-    data: { user },
-  } = await connectSupabase.auth.getUser();
+    const successMessage =
+      status === "approved"
+        ? "Timesheet approved successfully"
+        : "Timesheet rejected successfully - task moved back to Review";
 
-  if (!user) {
-    toast.error("User not found");
-    return;
-  }
+    const {
+      data: { user },
+    } = await connectSupabase.auth.getUser();
 
-  const { error } = await connectSupabase
-    .from("timesheets")
-    .update({
-      approval_status: status,
-      approved_by: user.id,
-      approved_at: new Date().toISOString(),
-    })
-    .eq("id", timesheetId);
+    if (!user) {
+      toast.error("User not found");
+      return;
+    }
 
-  if (error) {
-    console.error("Approval error:", error);
-    toast.error(`Failed to ${status} timesheet`);
-    return;
-  }
+    const { error } = await connectSupabase
+      .from("timesheets")
+      .update({
+        approval_status: status,
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
+      })
+      .eq("id", timesheetId);
+
+    if (error) {
+      console.error("Approval error:", error);
+      toast.error(`Failed to ${status} timesheet`);
+      return;
+    }
 
     // If rejected, move the related task back to "review"
-  if (status === "rejected") {
-    const relatedTimesheet = timesheets.find((t) => t.id === timesheetId);
-    const taskId = relatedTimesheet?.task_id;
+    if (status === "rejected") {
+      const relatedTimesheet = timesheets.find((t) => t.id === timesheetId);
+      const taskId = relatedTimesheet?.task_id;
 
-    if (taskId) {
-      const { error: taskError } = await connectSupabase
-        .from("task")
-        .update({ status: "review" })
-        .eq("id", taskId);
+      if (taskId) {
+        const { error: taskError } = await connectSupabase
+          .from("task")
+          .update({ status: "review" })
+          .eq("id", taskId);
 
-      if (taskError) {
-        console.error("Task status update error:", taskError);
-        toast.error("Timesheet rejected, but failed to move task back to Review");
-      } 
+        if (taskError) {
+          console.error("Task status update error:", taskError);
+          toast.error("Timesheet rejected, but failed to move task back to Review");
+        }
+      }
     }
-  }
 
-  toast.success(successMessage);
+    toast.success(successMessage);
 
-  fetchTimesheets();
-  fetchTasks();
-};
+    fetchTimesheets();
+    fetchTasks();
+  };
   const handleEditTimesheet = (item: any) => {
     const relatedTask = getTaskById(item.task_id);
 
@@ -376,9 +375,6 @@ const checkUserRole = async () => {
     return tasks.filter((v) => v.employee.id === id);
   };
 
-  // console.log(filterEmployee("5cee5ea8-3e98-4630-97ed-2c52a7f3982d"));
-
-  // Loading
   if (loading) {
     return (
       <div className="p-6">
@@ -402,12 +398,12 @@ const checkUserRole = async () => {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Kanban Board</h1>
           <p className="mt-1 text-sm text-slate-500">Manage and track tasks for this project</p>
         </div>
-        <div className="flex m-2">
-          {tasks.slice(0, 3).map((v) => (
+        <div className="flex items-center justify-between m-2">
+          {employees.slice(0, 5).map((v) => (
             <Avatar
               className="h-7 w-7 cursor-pointer"
               key={v.id}
-              onClick={() => setselectedEmp(v.employee.id)}
+              onClick={() => setselectedEmp(v.id)}
             >
               <AvatarImage
               // src={
@@ -415,22 +411,24 @@ const checkUserRole = async () => {
               //     .data.publicUrl
               // }
               />
-              <AvatarFallback>{initials(v.employee.name ?? "E")}</AvatarFallback>
+              <AvatarFallback
+                className="text-white"
+                style={{ backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)` }}
+              >
+                {initials(v.name ?? "E")}
+              </AvatarFallback>
             </Avatar>
           ))}
-          {/* <AvatarGroup> */}
-          {/* {dummyEmp.map((v, idx) => (
-            <Avatar className="h-7 w-7" key={idx}>
-              <AvatarImage
-              // src={
-              //   connectSupabase.storage.from("Employee").getPublicUrl(v.avatarUrl ?? "").data
-              //     .publicUrl
-              // }
-              />
-              <AvatarFallback>{initials(v.name)}</AvatarFallback>
-            </Avatar>
-          ))} */}
-          {tasks.length - 3 != 0 && <AvatarGroupCount>{tasks.length - 3}</AvatarGroupCount>}
+
+          {tasks.length - 3 != 0 && (
+            <AvatarGroupCount className="bg-gray-400">{tasks.length - 3}</AvatarGroupCount>
+          )}
+
+          {selectedEmp && (
+            <Button variant="destructive" className="ms-2" onClick={() => setselectedEmp("")}>
+              Clear
+            </Button>
+          )}
           {/* </AvatarGroup> */}
         </div>
       </div>
@@ -521,7 +519,7 @@ const checkUserRole = async () => {
                   columnTasks.map((task) => (
                     <div
                       key={task.id}
-                      draggable = {task.status !== "completed"}
+                      draggable={task.status !== "completed"}
                       onDragStart={() => task.status !== "completed" && handleDragStart(task)}
                       onDragEnd={() => setDraggedTask(null)}
                       className="
@@ -662,7 +660,6 @@ const checkUserRole = async () => {
                     <th className="px-5 py-3 text-left font-semibold text-slate-600">Approval</th>
                     <th className="px-5 py-3 text-center font-semibold text-slate-600">Action</th>
                   </tr>
-
                 </thead>
 
                 <tbody>
@@ -702,65 +699,59 @@ const checkUserRole = async () => {
                             )}
                           </td>
 
-                       <td className="px-5 py-4">
-                   {item.approval_status === "approved" ? (
-                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                 Approved
-                  </span>
-                ) : item.approval_status === "rejected" ? (
-              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                    Rejected
-              </span>
-  ) : (
-    <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
-      Pending
-    </span>
-  )}
-</td>
-                         <td className="px-5 py-4">
-  <div className="flex items-center justify-center gap-2">
+                          <td className="px-5 py-4">
+                            {item.approval_status === "approved" ? (
+                              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                Approved
+                              </span>
+                            ) : item.approval_status === "rejected" ? (
+                              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                                Rejected
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                                Pending
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Employee Edit */}
+                              <button
+                                className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
+                                onClick={() => handleEditTimesheet(item)}
+                              >
+                                <Pencil size={16} />
+                              </button>
 
-    {/* Employee Edit */}
-    <button
-      className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
-      onClick={() => handleEditTimesheet(item)}
-    >
-      <Pencil size={16} />
-    </button>
+                              {/* Employee Delete */}
+                              <button
+                                className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
+                                onClick={() => handleDeleteTimesheet(item.id)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
 
-    {/* Employee Delete */}
-    <button
-      className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
-      onClick={() => handleDeleteTimesheet(item.id)}
-    >
-      <Trash2 size={16} />
-    </button>
+                              {/* TL ONLY */}
+                              {isTL && item.approval_status === "pending" && (
+                                <>
+                                  <button
+                                    onClick={() => handleTimesheetApproval(item.id, "approved")}
+                                    className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
+                                  >
+                                    Approve
+                                  </button>
 
-    {/* TL ONLY */}
-    {isTL && item.approval_status === "pending" && (
-      <>
-        <button
-          onClick={() =>
-            handleTimesheetApproval(item.id, "approved")
-          }
-          className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
-        >
-          Approve
-        </button>
-
-        <button
-          onClick={() =>
-            handleTimesheetApproval(item.id, "rejected")
-          }
-          className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
-        >
-          Reject
-        </button>
-      </>
-    )}
-
-  </div>
-</td>
+                                  <button
+                                    onClick={() => handleTimesheetApproval(item.id, "rejected")}
+                                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       );
                     })
@@ -770,94 +761,94 @@ const checkUserRole = async () => {
             </div>
 
             {/* Mobile stacked cards (hidden on sm and up) */}
-          <div className="space-y-3 sm:hidden">
-            {projectTimesheets.length === 0 ? (
-              <div className="rounded-lg border border-slate-100 px-4 py-8 text-center text-sm text-slate-400">
-                No timesheet entries yet.
-              </div>
-            ) : (
-              projectTimesheets.map((item) => {
-                const relatedTask = getTaskById(item.task_id);
-                const hour = Math.floor(item.time_duration / 60);
-                const minute = item.time_duration % 60;
+            <div className="space-y-3 sm:hidden">
+              {projectTimesheets.length === 0 ? (
+                <div className="rounded-lg border border-slate-100 px-4 py-8 text-center text-sm text-slate-400">
+                  No timesheet entries yet.
+                </div>
+              ) : (
+                projectTimesheets.map((item) => {
+                  const relatedTask = getTaskById(item.task_id);
+                  const hour = Math.floor(item.time_duration / 60);
+                  const minute = item.time_duration % 60;
 
-                return (
-                  <div key={item.id} className="rounded-lg border border-slate-100 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {item.task_description}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
+                  return (
+                    <div key={item.id} className="rounded-lg border border-slate-100 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            {item.task_description}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
 
-                      <div className="flex shrink-0 gap-2">
-                        <button
-                          className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
-                          onClick={() => handleEditTimesheet(item)}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
-                          onClick={() => handleDeleteTimesheet(item.id)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                      <span className="font-medium text-slate-900">
-                        {hour}h {minute}m
-                      </span>
-
-                      {relatedTask ? (
-                        <span className="text-slate-600">{relatedTask.title}</span>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                      {item.approval_status === "approved" ? (
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                          Approved
-                        </span>
-                      ) : item.approval_status === "rejected" ? (
-                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                          Rejected
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
-                          Pending
-                        </span>
-                      )}
-
-                      {isTL && item.approval_status === "pending" && (
-                        <div className="flex gap-2">
+                        <div className="flex shrink-0 gap-2">
                           <button
-                            onClick={() => handleTimesheetApproval(item.id, "approved")}
-                            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                            className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100"
+                            onClick={() => handleEditTimesheet(item)}
                           >
-                            Approve
+                            <Pencil size={14} />
                           </button>
                           <button
-                            onClick={() => handleTimesheetApproval(item.id, "rejected")}
-                            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                            className="rounded-lg border border-slate-200 p-2 text-red-500 hover:bg-red-50"
+                            onClick={() => handleDeleteTimesheet(item.id)}
                           >
-                            Reject
+                            <Trash2 size={14} />
                           </button>
                         </div>
-                      )}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+                        <span className="font-medium text-slate-900">
+                          {hour}h {minute}m
+                        </span>
+
+                        {relatedTask ? (
+                          <span className="text-slate-600">{relatedTask.title}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                        {item.approval_status === "approved" ? (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                            Approved
+                          </span>
+                        ) : item.approval_status === "rejected" ? (
+                          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                            Rejected
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                            Pending
+                          </span>
+                        )}
+
+                        {isTL && item.approval_status === "pending" && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleTimesheetApproval(item.id, "approved")}
+                              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleTimesheetApproval(item.id, "rejected")}
+                              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-slate-50 p-6 text-center sm:p-8">
@@ -895,8 +886,9 @@ const checkUserRole = async () => {
                 <textarea
                   rows={5}
                   value={taskDescription}
-                  onChange={(e) =>{ setTaskDescription(e.target.value)
-                  setIsChanged(true);
+                  onChange={(e) => {
+                    setTaskDescription(e.target.value);
+                    setIsChanged(true);
                   }}
                   className="w-full rounded-lg border p-3"
                   placeholder="Enter task description..."
@@ -910,8 +902,9 @@ const checkUserRole = async () => {
                     type="number"
                     min={0}
                     value={hours}
-                    onChange={(e) =>{ setHours(e.target.value)
-                          setIsChanged(true);
+                    onChange={(e) => {
+                      setHours(e.target.value);
+                      setIsChanged(true);
                     }}
                     className="w-full rounded-lg border border-slate-200 p-3 focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. 2"
@@ -925,8 +918,9 @@ const checkUserRole = async () => {
                     min={0}
                     max={59}
                     value={minutes}
-                    onChange={(e) => {setMinutes(e.target.value)
-                     setIsChanged(true);
+                    onChange={(e) => {
+                      setMinutes(e.target.value);
+                      setIsChanged(true);
                     }}
                     className="w-full rounded-lg border border-slate-200 p-3 focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. 30"
@@ -943,13 +937,13 @@ const checkUserRole = async () => {
                 </button>
                 <button
                   onClick={handleSaveTimesheet}
-                   disabled={!!editingTimesheet && !isChanged}
-                 className={`rounded-lg px-5 py-2 text-white ${
-                editingTimesheet && !isChanged
-                ? "cursor-not-allowed bg-gray-300"
-                : "bg-blue-600 hover:bg-blue-700"
-                     }`}
-                 >
+                  disabled={!!editingTimesheet && !isChanged}
+                  className={`rounded-lg px-5 py-2 text-white ${
+                    editingTimesheet && !isChanged
+                      ? "cursor-not-allowed bg-gray-300"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
                   {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
                 </button>
               </div>
