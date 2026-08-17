@@ -507,34 +507,43 @@ function AddEmployeeModal({
         .upload(filePath, image);
 
       if (uploadError) throw uploadError;
+      if (
+        formData.name &&
+        formData.email &&
+        formData.phone &&
+        formData.department &&
+        formData.role &&
+        formData.status
+      ) {
+        const { error } = await connectSupabase.from("employee").insert({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          avatarUrl: filePath,
+          department: formData.department,
+          role: formData.role,
+          status: formData.status,
+        });
 
-      const { error } = await connectSupabase.from("employee").insert({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        avatarUrl: filePath,
-        department: formData.department,
-        role: formData.role,
-        status: formData.status,
-      });
+        if (error) throw error;
 
-      if (error) throw error;
-
-      toast.success("Employee Added Successfully.");
-      onOpenChange(false);
+        toast.success("Employee Added Successfully.");
+        setFormData({
+          id: "",
+          department: "",
+          email: "",
+          name: "",
+          phone: "",
+          role: "",
+          status: "" as EmployeeStatus,
+        });
+        onOpenChange(false);
+      } else {
+        toast.error("Enter field correctly");
+      }
     } catch (error) {
       toast.error((error as Error).message);
     }
-
-    setFormData({
-      id: "",
-      department: "",
-      email: "",
-      name: "",
-      phone: "",
-      role: "",
-      status: "" as EmployeeStatus,
-    });
   };
 
   return (
@@ -585,6 +594,7 @@ function AddEmployeeModal({
             placeholder="e.g. Jane Cooper"
             className="mt-1.5"
             required
+            value={formData.name}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
@@ -603,6 +613,7 @@ function AddEmployeeModal({
             placeholder="jane@company.com"
             className="mt-1.5"
             required
+            value={formData.email}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
@@ -620,6 +631,7 @@ function AddEmployeeModal({
             placeholder="+1 555 000 0000"
             className="mt-1.5"
             required
+            value={formData.phone}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
@@ -663,6 +675,7 @@ function AddEmployeeModal({
             placeholder="e.g. Senior Product Designer"
             className="mt-1.5"
             required
+            value={formData.role}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,

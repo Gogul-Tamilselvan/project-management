@@ -234,7 +234,7 @@ export function TasksPage() {
                         <PriorityPill priority={t.priority} />
                       </TableCell>
                       <TableCell>
-                        <TaskStatusBadge status={t.status ?? ""} />
+                        <TaskStatusBadge status={t.status} />
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -328,17 +328,17 @@ function CreateTaskModal({
   });
 
   const resetForm = () => {
-  setprojectDetail({
-    id: "",
-    title: "",
-    description: "",
-    projectId: "",
-    assigneeId: "",
-    priority: "low",
-    status: "in_progress",
-    dueDate: "",
-  });
-};
+    setprojectDetail({
+      id: "",
+      title: "",
+      description: "",
+      projectId: "",
+      assigneeId: "",
+      priority: "low",
+      status: "in_progress",
+      dueDate: "",
+    });
+  };
 
   const addTask = async () => {
     if (
@@ -385,13 +385,15 @@ function CreateTaskModal({
       description="Add a new task and assign it to a teammate."
       footer={
         <>
-         <Button variant="ghost" onClick={() => {
-         resetForm();
-         onOpenChange(false);
-  }}
->
-  Cancel
-</Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              resetForm();
+              onOpenChange(false);
+            }}
+          >
+            Cancel
+          </Button>
           <Button type="submit" form="task-from" onClick={addTask}>
             Create task
           </Button>
@@ -506,7 +508,7 @@ function CreateTaskModal({
             value={projectDetail.dueDate}
             className="mt-1.5"
             onChange={(e) => setprojectDetail((prev) => ({ ...prev, dueDate: e.target.value }))}
-            onClick={(e)=>{
+            onClick={(e) => {
               (e.currentTarget as HTMLInputElement).showPicker?.();
             }}
           />
@@ -527,8 +529,8 @@ function ViewTask({
 }) {
   return (
     <Modal
-  open={open}
-  onOpenChange={onOpenChange}
+      open={open}
+      onOpenChange={onOpenChange}
       title="View task"
       description="View task details and track its progress."
       footer={
