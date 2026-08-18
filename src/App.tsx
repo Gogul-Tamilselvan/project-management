@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { connectSupabase } from "@/services/config";
 import KanbanBoard from "./components/kanban/kanban";
+import TaskApprovalPage from "./components/kanban/TaskApprovalPage";
 
 function NotFoundPage() {
   return (
@@ -92,6 +93,7 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="kanban/:projectId" element={<KanbanBoard />} />
+          <Route path="kanban/tasks/approvals" element={<TaskApprovalPage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="profile" element={<ProfilePage />} />

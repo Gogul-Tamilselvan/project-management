@@ -7,6 +7,8 @@ import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } fr
 import { TaskStatus } from "@/lib/types";
 import { formatShortDate, initials } from "@/lib/format";
 import { Button } from "../ui/button";
+import { useNavigate } from "react-router-dom";
+import { XCircle , Clock } from "lucide-react";
 
 interface KanbanTask {
   id: string;
@@ -18,6 +20,11 @@ interface KanbanTask {
   dueDate: string;
   projectId: string;
   employee: Employee;
+
+  approval_status?: "pending" | "approved" | "rejected";
+  approved_by?: string | null;
+  approved_at?: string | null;
+  rejection_reason?: string | null;
 }
 
 interface Employee {
@@ -49,6 +56,8 @@ const columns: {
 ];
 
 export default function KanbanBoard() {
+  const navigate = useNavigate();
+
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +78,7 @@ export default function KanbanBoard() {
   const { projectId } = useParams<{
     projectId: string;
   }>();
+  const [rejectionModalTask, setRejectionModalTask] = useState<KanbanTask | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -80,6 +90,7 @@ export default function KanbanBoard() {
       setLoading(false);
     }
   }, [projectId]);
+
   const checkUserRole = async () => {
     try {
       const {
@@ -195,21 +206,41 @@ export default function KanbanBoard() {
       return;
     }
 
+     // Prevent Review tasks from being moved directly to Completed
+      if (
+        draggedTask.status === "review" &&
+        newStatus === "completed"
+      ) {
+        toast.error("Review tasks must be approved by TL before completion");
+        setDraggedTask(null);
+        return;
+      }
+
     if (draggedTask.status === newStatus) {
       setDraggedTask(null);
       return;
     }
 
     try {
-      const { error } = await connectSupabase
-        .from("task")
-        .update({
-          status: newStatus,
-        })
-        .eq("id", draggedTask.id);
+      const updateData: {
+      status: TaskStatus;
+      approval_status?: string;
+    } = {
+      status: newStatus,
+    };
+
+    if (newStatus === "review") {
+      updateData.approval_status = "pending";
+    }
+
+    const { error } = await connectSupabase
+      .from("task")
+      .update(updateData)
+      .eq("id", draggedTask.id);
 
       if (error) {
         console.error("Error updating task status:", error);
+        toast.error("Failed to update task");
         return;
       }
 
@@ -219,14 +250,24 @@ export default function KanbanBoard() {
             ? {
                 ...task,
                 status: newStatus,
+                approval_status:
+                newStatus === "review"
+                  ? "pending"
+                  : task.approval_status,
               }
             : task,
         ),
       );
 
       console.log("Task status updated:", newStatus);
+       toast.success(
+      newStatus === "review"
+        ? "Task submitted for TL approval"
+        : "Task status updated",
+    );
     } catch (error) {
       console.error("Unexpected error:", error);
+      toast.error("Something went wrong");
     } finally {
       setDraggedTask(null);
     }
@@ -398,6 +439,15 @@ export default function KanbanBoard() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Kanban Board</h1>
           <p className="mt-1 text-sm text-slate-500">Manage and track tasks for this project</p>
         </div>
+         <div className="flex items-center gap-4">
+        {isTL && (
+          <Button
+            onClick={() => navigate("/kanban/tasks/approvals")}
+            className="h-9 gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow"
+          >
+            Task Approvals
+          </Button>
+        )}
         <div className="flex items-center justify-between m-2">
           {employees.slice(0, 5).map((v) => (
             <Avatar
@@ -430,6 +480,7 @@ export default function KanbanBoard() {
             </Button>
           )}
           {/* </AvatarGroup> */}
+        </div>
         </div>
       </div>
 
@@ -520,7 +571,7 @@ export default function KanbanBoard() {
                     <div
                       key={task.id}
                       draggable={task.status !== "completed"}
-                      onDragStart={() => task.status !== "completed" && handleDragStart(task)}
+                      onDragStart={() => task.status !== "completed"  && handleDragStart(task)}
                       onDragEnd={() => setDraggedTask(null)}
                       className="
                                              group cursor-grab
@@ -557,27 +608,53 @@ export default function KanbanBoard() {
                         </p>
                       )}
 
-                      {task.priority && (
-                        <div className="mt-4">
-                          <span
-                            className={`
-                            inline-flex rounded-full
-                            px-2.5 py-1
-                            text-xs font-medium
-                            ${
-                              task.priority.toLowerCase() === "high"
-                                ? "bg-red-100 text-red-700"
-                                : task.priority.toLowerCase() === "medium"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-green-100 text-green-700"
-                            }
-                          `}
-                          >
-                            {task.priority}
-                          </span>
+                      {/* Priority + Approval status */}
+                      {(task.priority ||
+                        (task.status === "review" && task.approval_status === "pending") ||
+                        (task.status === "completed" && task.approval_status === "approved") ||
+                        (task.approval_status === "rejected" && task.rejection_reason)) && (
+                        <div className="mt-4 flex items-center gap-1.5">
+                          {task.priority && (
+                            <span
+                              className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                task.priority.toLowerCase() === "high"
+                                  ? "bg-red-100 text-red-700"
+                                  : task.priority.toLowerCase() === "medium"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {task.priority}
+                            </span>
+                          )}
+
+                          {task.status === "review" && task.approval_status === "pending" && (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-600/20">
+                              <Clock size={11} strokeWidth={2.5} />
+                              Pending
+                            </span>
+                          )}
+
+                          {task.status === "completed" &&
+                            task.approval_status === "approved" && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-600/20">
+                                ✓
+                                Approved
+                              </span>
+                            )}
+
+                          {task.approval_status === "rejected" && task.rejection_reason && (
+                            <button
+                              type="button"
+                              onClick={() => setRejectionModalTask(task)}
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/20 hover:bg-red-100 "
+                            >
+                              <XCircle size={11} strokeWidth={2.5} />
+                              Rejected
+                            </button>
+                          )}
                         </div>
                       )}
-
                       <div className="my-4 border-t border-slate-100" />
 
                       {task.dueDate && (
@@ -947,6 +1024,36 @@ export default function KanbanBoard() {
                   {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {rejectionModalTask && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setRejectionModalTask(null)}
+        >
+          <div
+            className="w-[420px] rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold  text-red-700/80">Rejection reason</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectionModalTask(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="mb-3 text-sm text-slate-500">{rejectionModalTask.title}</p>
+
+            <div className="rounded-lg border border-gray-200  p-3">
+              <p className="text-sm leading-5 ">{rejectionModalTask.rejection_reason}</p>
             </div>
           </div>
         </div>

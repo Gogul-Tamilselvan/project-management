@@ -671,25 +671,34 @@ function EditTask({
   }, [open, value]);
 
   const editTaskfun = async (id: string) => {
+     const updateData = {
+    title: editTask.title,
+    description: editTask.description ?? "",
+    projectId: editTask.projectId,
+    assigneeId: editTask.assigneeId,
+    dueDate: editTask.dueDate,
+    priority: editTask.priority,
+    status: editTask.status,
+    // emp_image: editTask.emp_image,
+    ...(editTask.status === "review" && {
+      approval_status: "pending" as const,
+    }),
+  };
+
     const { error } = await connectSupabase
       .from("task")
-      .update({
-        title: editTask.title,
-        description: editTask.description,
-        projectId: editTask.projectId,
-        assigneeId: editTask.assigneeId,
-        dueDate: editTask.dueDate,
-        priority: editTask.priority,
-        status: editTask.status,
-        // emp_image: editTask.emp_image,
-      })
+      .update(updateData)
       .eq("id", id);
 
     if (error) {
       toast.error(error.message);
     } else {
       onOpenChange(false);
-      toast.success("Updated task");
+      toast.success(
+        editTask.status === "review"
+        ? "Task submitted for TL approval"
+        : "Updated task",
+      );
     }
   };
 
