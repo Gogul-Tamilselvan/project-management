@@ -51,11 +51,12 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
     try {
       const { error, data } = await connectSupabase.auth.getUser();
       if (data) {
-        const dt = data.user?.user_metadata;
+        const dt = data.user?.identities?.[0]?.identity_data ?? undefined;
+
         if (dt) {
           setuserDt({
             email: dt.email,
-            name: dt.name,
+            name: dt.name ?? "no name",
           });
         }
       } else toast.error(error?.message);
