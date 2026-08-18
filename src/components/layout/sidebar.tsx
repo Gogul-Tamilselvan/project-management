@@ -19,6 +19,7 @@ import { mockCurrentUser } from "@/lib/mock/employees";
 import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
+import { UserDataType } from "@/lib/types";
 
 const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -39,7 +40,29 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarProps) {
   const { pathname } = useLocation();
+  const [userDt, setuserDt] = useState<UserDataType>({
+    email: "",
+    name: "",
+  });
+
   const navigate = useNavigate();
+
+  const getUserData = async () => {
+    try {
+      const { error, data } = await connectSupabase.auth.getUser();
+      if (data) {
+        const dt = data.user?.user_metadata;
+        if (dt) {
+          setuserDt({
+            email: dt.email,
+            name: dt.name,
+          });
+        }
+      } else toast.error(error?.message);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Network error");
+    }
+  };
 
   const logout = async () => {
     const { error } = await connectSupabase.auth.signOut();
@@ -51,6 +74,10 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
       navigate("/");
     }, 500);
   };
+
+  useEffect(() => {
+    getUserData();
+  }, []);
 
   return (
     <aside
@@ -150,8 +177,8 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
                 exit={{ opacity: 0 }}
                 className="min-w-0 flex-1"
               >
-                <p className="truncate text-sm font-semibold">{mockCurrentUser.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{mockCurrentUser.role}</p>
+                <p className="truncate text-sm font-semibold">{userDt.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{userDt.email}</p>
               </motion.div>
             )}
           </AnimatePresence>

@@ -47,4 +47,12 @@ export interface Activity {
   timestamp: string; // ISO
 }
 
-export interface CurrentUser extends Employee {}
+// export interface CurrentUser extends Employee {}
+
+export interface UserDataType {
+  email: string;
+  name: string;
+  // sub: string;
+  // phone_verified: boolean;
+  // email_verified: boolean;
+}

@@ -17,6 +17,7 @@ import { mockActivities } from "@/lib/mock/activities";
 import { connectSupabase } from "@/services/config";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { UserDataType } from "@/lib/types";
 
 interface NavbarProps {
   onOpenMobileNav: () => void;
@@ -24,12 +25,34 @@ interface NavbarProps {
 
 export function Navbar({ onOpenMobileNav }: NavbarProps) {
   const [dark, setDark] = useState(false);
+  const [userDt, setuserDt] = useState<UserDataType>({
+    email: "",
+    name: "",
+  });
+
+  const getUserData = async () => {
+    try {
+      const { error, data } = await connectSupabase.auth.getUser();
+      if (data) {
+        const dt = data.user?.user_metadata;
+        if (dt) {
+          setuserDt({
+            email: dt.email,
+            name: dt.name,
+          });
+        }
+      } else toast.error(error?.message);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Network error");
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
     const isDark = stored === "dark";
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
+    getUserData();
   }, []);
 
   const toggleTheme = () => {
@@ -67,7 +90,7 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
       </Button>
 
       <div className="hidden min-w-0 md:block">
-        <p className="text-sm font-semibold text-foreground">Welcome back, {firstName} 👋</p>
+        <p className="text-sm font-semibold text-foreground">Welcome back, {userDt.name} 👋</p>
         <p className="text-xs text-muted-foreground">Here's what's happening across your team.</p>
       </div>
 
@@ -131,8 +154,8 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
             <div>
-              <p className="text-sm font-semibold">{mockCurrentUser.name}</p>
-              <p className="text-xs font-normal text-muted-foreground">{mockCurrentUser.email}</p>
+              <p className="text-sm font-semibold">{userDt.name}</p>
+              <p className="text-xs font-normal text-muted-foreground">{userDt.email}</p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
