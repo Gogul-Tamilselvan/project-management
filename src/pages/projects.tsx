@@ -50,7 +50,7 @@ export function ProjectsPage() {
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  
+
   useEffect(() => {
     getProjects();
   }, []);
@@ -79,10 +79,7 @@ export function ProjectsPage() {
       return;
     }
     // Delete project if no tasks are assigned
-    const { error } = await connectSupabase
-      .from("projects")
-      .delete()
-      .eq("id", selectedProject.id);
+    const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
 
     if (error) {
       console.error("Delete error:", error);
@@ -187,8 +184,6 @@ export function ProjectsPage() {
               {f.label}
             </button>
           ))}
-
-          
         </div>
       </div>
 
@@ -318,7 +313,6 @@ function CreateProjectModal({
       setFormData(projectData);
       setOriginalData(projectData);
     } else {
-
       setFormData(initialFormData);
       setOriginalData(initialFormData);
     }
@@ -495,7 +489,6 @@ function CreateProjectModal({
             onChange={handleChange}
             onClick={(e) => {
               (e.currentTarget as HTMLInputElement).showPicker?.();
-
             }}
             readOnly={mode === "view"}
             required
