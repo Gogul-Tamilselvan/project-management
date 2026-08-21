@@ -262,7 +262,7 @@ export default function TaskApprovalPage() {
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-border border-t-blue-600" />
 
-          <p className="mt-3 text-sm text-slate-500">Loading task approvals...</p>
+          <p className="mt-3 text-sm text-foreground">Loading task approvals...</p>
         </div>
       </div>
     );
@@ -271,14 +271,14 @@ export default function TaskApprovalPage() {
   if (!isTL) {
     return (
       <div className="flex min-h-[500px] items-center justify-center p-6">
-        <div className="max-w-md rounded-2xl border border-red-100 bg-white p-8 text-center shadow-sm">
+        <div className="max-w-md rounded-2xl border border-red-100 bg-card p-8 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
             <AlertCircle className="h-7 w-7 text-red-600" />
           </div>
 
-          <h2 className="mt-5 text-xl font-semibold text-slate-900">Access Denied</h2>
+          <h2 className="mt-5 text-xl font-semibold text-foreground">Access Denied</h2>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
             You do not have permission to access Task Approval. Only Team Leads can approve or
             reject tasks.
           </p>
@@ -289,7 +289,7 @@ export default function TaskApprovalPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+      <div className="min-h-screen bg-card p-4 md:p-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -298,9 +298,9 @@ export default function TaskApprovalPage() {
               </div>
 
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">Task Approval</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Task Approval</h1>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-foreground">
                   Review and approve tasks submitted by employees
                 </p>
               </div>
@@ -320,15 +320,15 @@ export default function TaskApprovalPage() {
 
         {/* Content */}
         {tasks.length === 0 ? (
-          <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-border bg-white shadow-sm">
+          <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-border bg-card shadow-sm">
             <div className="max-w-sm px-6 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                 <Check className="h-8 w-8 text-green-600" />
               </div>
 
-              <h2 className="mt-5 text-lg font-semibold text-slate-900">All caught up!</h2>
+              <h2 className="mt-5 text-lg font-semibold text-foreground">All caught up!</h2>
 
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+              <p className="mt-2 text-sm leading-6 text-foreground">
                 There are currently no tasks waiting for your approval.
               </p>
             </div>
@@ -343,12 +343,12 @@ export default function TaskApprovalPage() {
               return (
                 <div
                   key={task.id}
-                  className="rounded-2xl border border-border bg-white p-5 shadow-sm transition hover:shadow-md"
+                  className="rounded-2xl border border-border bg-card p-5 shadow-sm transition hover:shadow-md"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-lg font-semibold text-slate-900">{task.title}</h2>
+                        <h2 className="text-lg font-semibold text-foreground">{task.title}</h2>
 
                         <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-700">
                           Pending Approval
@@ -356,29 +356,29 @@ export default function TaskApprovalPage() {
                       </div>
 
                       {task.description && (
-                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground">
                           {task.description}
                         </p>
                       )}
 
                       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
                         {task.employee && (
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <User className="h-4 w-4 text-slate-400" />
+                          <div className="flex items-center gap-2 text-sm text-foreground">
+                            <User className="h-4 w-4 text-foreground" />
 
                             <span>{task.employee.name}</span>
                           </div>
                         )}
 
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <ClipboardCheck className="h-4 w-4 text-slate-400" />
+                        <div className="flex items-center gap-2 text-sm text-foreground">
+                          <ClipboardCheck className="h-4 w-4 text-foreground" />
 
                           <span>In Review</span>
                         </div>
 
                         {task.dueDate && (
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <CalendarDays className="h-4 w-4 text-slate-400" />
+                          <div className="flex items-center gap-2 text-sm text-foreground">
+                            <CalendarDays className="h-4 w-4 text-foreground" />
 
                             <span>{new Date(task.dueDate).toLocaleDateString()}</span>
                           </div>
@@ -407,10 +407,10 @@ export default function TaskApprovalPage() {
                     )}
                   </div>
 
-                  <div className="my-5 border-t border-slate-100" />
+                  <div className="my-5 border-t border-border" />
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs text-foreground">
                       This task is waiting for TL approval.
                     </div>
 
@@ -419,7 +419,7 @@ export default function TaskApprovalPage() {
                         type="button"
                         disabled={isApproving || isRejecting}
                         onClick={() => openRejectModal(task)}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-200 bg-card px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
                       >
                         <X className="h-4 w-4" />
                         Reject
@@ -456,12 +456,12 @@ export default function TaskApprovalPage() {
 
       {isRejectModalOpen && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Reject Task</h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-foreground">
                   Please provide a reason for rejecting this task.
                 </p>
               </div>
@@ -473,20 +473,24 @@ export default function TaskApprovalPage() {
                   setSelectedTask(null);
                   setRejectionReason("");
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="mt-5 rounded-lg bg-slate-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Task</p>
+            <div className="mt-5 rounded-lg bg-card p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Task
+              </p>
 
-              <p className="mt-1 text-sm font-semibold text-slate-800">{selectedTask.title}</p>
+              <p className="mt-1 text-sm font-semibold text-muted-foreground">
+                {selectedTask.title}
+              </p>
             </div>
 
             <div className="mt-5">
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 Rejection Reason
               </label>
 
@@ -508,7 +512,7 @@ export default function TaskApprovalPage() {
                   setSelectedTask(null);
                   setRejectionReason("");
                 }}
-                className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -517,11 +521,11 @@ export default function TaskApprovalPage() {
                 type="button"
                 disabled={processingRejectTaskId === selectedTask.id || !rejectionReason.trim()}
                 onClick={rejectTask}
-                className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {processingRejectTaskId === selectedTask.id ? (
                   <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-transparent" />
                     Rejecting...
                   </>
                 ) : (

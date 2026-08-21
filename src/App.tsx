@@ -1,7 +1,3 @@
-
-
-
-
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/app-shell";
 import { DashboardPage } from "@/pages/dashboard";
@@ -76,24 +72,18 @@ export function App() {
         <Route path="/" element={<Navigate to="/signin" replace />} />
         <Route
           path="/signin"
-          element={
-            logged ? <Navigate to="/dashboard" replace /> : <SigninPage />
-          }
+          element={logged ? <Navigate to="/dashboard" replace /> : <SigninPage />}
         />
         <Route
           path="/signup"
-          element={
-            logged ? <Navigate to="/signin" replace /> : <SignupPage />
-          }
+          element={logged ? <Navigate to="/signin" replace /> : <SignupPage />}
         />
 
-        <Route element={
-          logged ? <AppShell /> : <Navigate to="/signin" replace />
-        }>
+        <Route element={logged ? <AppShell /> : <Navigate to="/signin" replace />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
-          <Route path="kanban/:projectId" element={<KanbanBoard />} />
-          <Route path="kanban/tasks/approvals" element={<TaskApprovalPage />} />
+          <Route path="projects/:projectId" element={<KanbanBoard />} />
+          <Route path="projects/tasks/approvals" element={<TaskApprovalPage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="profile" element={<ProfilePage />} />

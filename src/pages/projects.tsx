@@ -51,6 +51,15 @@ export function ProjectsPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  const totalPercent = async (id: string): Promise<number> => {
+    const { data } = await connectSupabase.from("task").select("status").eq("projectId", id);
+    if (data) {
+      const dt = data.map((v) => getProgressByStatus(v.status)).reduce((acc, count) => count + acc);
+      return Math.ceil(dt / 3);
+    }
+    return 0;
+  };
+
   useEffect(() => {
     getProjects();
   }, []);
@@ -103,11 +112,11 @@ export function ProjectsPage() {
 
   const navigate = useNavigate();
   const handleView = (project: Project) => {
-    navigate(`/kanban/${project.id}`);
+    navigate(`/projects/${project.id}`);
   };
 
   const getProjects = async () => {
-    const { data, error } = await connectSupabase
+    const { data: projectdt, error } = await connectSupabase
       .from("projects")
       .select("*")
       .order("created_at", { ascending: false });
@@ -117,16 +126,18 @@ export function ProjectsPage() {
       return;
     }
 
-    const formattedProjects: Project[] = data.map((item) => ({
-      id: item.id,
-      name: item.project_name,
-      description: item.description,
-      status: item.status,
-      progress: getProgressByStatus(item.status),
-      startDate: item.start_date,
-      dueDate: item.end_date,
-      teamIds: [],
-    }));
+    const formattedProjects: Project[] = await Promise.all(
+      projectdt.map(async (item) => ({
+        id: item.id,
+        name: item.project_name,
+        description: item.description,
+        status: item.status,
+        progress: await totalPercent(item.id),
+        startDate: item.start_date,
+        dueDate: item.end_date,
+        teamIds: [],
+      })),
+    );
 
     setProjects(formattedProjects);
   };
@@ -197,18 +208,20 @@ export function ProjectsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((p) => (
-            <ProjectCard
-              key={p.id}
-              project={p}
-              onEdit={handleEdit}
-              onDelete={() => {
-                setSelectedProject(p);
-                setIsDeleteOpen(true);
-              }}
-              onView={handleView}
-            />
-          ))}
+          {visible.map((p) => {
+            return (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                onEdit={handleEdit}
+                onDelete={() => {
+                  setSelectedProject(p);
+                  setIsDeleteOpen(true);
+                }}
+                onView={handleView}
+              />
+            );
+          })}
         </div>
       )}
 

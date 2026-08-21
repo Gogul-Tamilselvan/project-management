@@ -56,3 +56,14 @@ export interface UserDataType {
   // phone_verified: boolean;
   // email_verified: boolean;
 }
+
+export interface TimeSheetType {
+  approval_status: string;
+  approved_at: string;
+  approved_by: string;
+  created_at: string;
+  id: string;
+  task_description: string;
+  task_id: string;
+  time_duration: number;
+}

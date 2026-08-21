@@ -4,13 +4,14 @@ import { useParams } from "react-router-dom";
 import { CalendarDays, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
-import { TaskStatus } from "@/lib/types";
+import { TaskStatus, TimeSheetType } from "@/lib/types";
 import { formatShortDate, initials } from "@/lib/format";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { XCircle, Clock } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { Table, TableHeader, TableRow, TableBody, TableHead, TableCell } from "../ui/table";
 
 interface KanbanTask {
   id: string;
@@ -22,7 +23,6 @@ interface KanbanTask {
   dueDate: string;
   projectId: string;
   employee: Employee;
-
   approval_status?: "pending" | "approved" | "rejected";
   approved_by?: string | null;
   approved_at?: string | null;
@@ -70,9 +70,9 @@ export default function KanbanBoard() {
   const [taskDescription, setTaskDescription] = useState("");
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
-  const [timesheets, setTimesheets] = useState<any[]>([]);
-  const [editingTimesheet, setEditingTimesheet] = useState<any | null>(null);
-  console.log("task: ", tasks);
+  const [timesheets, setTimesheets] = useState<TimeSheetType[]>([]);
+  const [editingTimesheet, setEditingTimesheet] = useState<TimeSheetType | null>(null);
+  console.log("task: ", timesheets);
 
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
   const [isChanged, setIsChanged] = useState(false);
@@ -113,15 +113,6 @@ export default function KanbanBoard() {
         setIsTL(false);
         return;
       }
-
-      // console.log(
-      //   "EMPLOYEE DETAILS:",
-      //   employeesData?.map((emp) => ({
-      //     id: emp.id,
-      //     email: emp.email,
-      //     role: emp.role,
-      //   })),
-      // );
 
       const employee = employeesData?.find(
         (emp) => emp.email?.toLowerCase() === user.email?.toLowerCase(),
@@ -393,7 +384,7 @@ export default function KanbanBoard() {
     fetchTimesheets();
     fetchTasks();
   };
-  const handleEditTimesheet = (item: any) => {
+  const handleEditTimesheet = (item: TimeSheetType) => {
     const relatedTask = getTaskById(item.task_id);
 
     setEditingTimesheet(item);
@@ -438,8 +429,9 @@ export default function KanbanBoard() {
         <div className="flex items-center gap-4">
           {isTL && (
             <Button
-              onClick={() => navigate("/kanban/tasks/approvals")}
-              className="h-9 gap-2 rounded-lg border px-3.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow"
+              variant={"default"}
+              onClick={() => navigate("/projects/tasks/approvals")}
+              // className="h-9 gap-2 rounded-lg border px-3.5 text-sm font-medium text-muted-foreground shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow"
             >
               Task Approvals
             </Button>
@@ -467,7 +459,9 @@ export default function KanbanBoard() {
             ))}
 
             {tasks.length - 3 != 0 && (
-              <AvatarGroupCount className="bg-gray-400">{tasks.length - 3}</AvatarGroupCount>
+              <AvatarGroupCount className="bg-muted-foreground">
+                {tasks.length - 3}
+              </AvatarGroupCount>
             )}
 
             {selectedEmp && (
@@ -522,21 +516,14 @@ export default function KanbanBoard() {
               onDrop={() => {
                 handleDrop(column.id);
               }}
-              className={`
-                             flex min-h-[500px] flex-col  bg-card
-                             rounded-xl border shadow-sm
-                             border-t-4 ${style.top}
-                             transition-all `}
+              className={` flex min-h-[500px] flex-col  bg-card rounded-xl border shadow-sm border-t-4 ${style.top} transition-all `}
             >
               <div className="flex items-center justify-between border-b border-border px-4 py-4">
                 <div className="flex items-center gap-3">
                   <h2 className={`font-semibold ${style.header}`}>{column.title}</h2>
 
                   <span
-                    className={`
-                                        rounded-full px-2.5 py-1
-                                        text-xs font-semibold
-                                        ${style.badge} `}
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge} `}
                   >
                     {columnTasks.length}
                   </span>
@@ -546,12 +533,7 @@ export default function KanbanBoard() {
               <div className="flex-1 space-y-3 p-4">
                 {columnTasks.length === 0 ? (
                   <div
-                    className={`
-                                         flex min-h-[180px]
-                                         items-center justify-center
-                                         rounded-lg border border-dashed
-                                         ${style.border}
-                                         bg-card shadow-soft `}
+                    className={` flex min-h-[180px] items-center justify-center rounded-lg border border-dashed ${style.border} bg-card shadow-soft `}
                   >
                     <div className="text-center">
                       <div className="mb-2 text-2xl ">+</div>
@@ -568,15 +550,7 @@ export default function KanbanBoard() {
                       draggable={task.status !== "completed"}
                       onDragStart={() => task.status !== "completed" && handleDragStart(task)}
                       onDragEnd={() => setDraggedTask(null)}
-                      className="
-                                             group cursor-grab
-                                             rounded-xl border border-border
-                                             bg-card shadow-soft p-4
-                                            
-                                             transition-all duration-200
-                                             hover:-translate-y-0.5
-                                             hover:shadow-md
-                                             active:cursor-grabbing  "
+                      className="group cursor-grab  rounded-xl border border-border  bg-card shadow-soft p-4   transition-all duration-200  hover:-translate-y-0.5  hover:shadow-md  active:cursor-grabbing  "
                     >
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-sm font-semibold leading-5  text-foreground ">
@@ -585,14 +559,7 @@ export default function KanbanBoard() {
 
                         <button
                           type="button"
-                          className="
-                          text-lg leading-none
-                          text-slate-400
-                          opacity-0
-                          transition
-                          group-hover:opacity-100
-                          hover:text-slate-700
-                        "
+                          className="text-lg leading-none text-slate-400 opacity-0 transition group-hover:opacity-100 hover:text-slate-700 "
                         >
                           ⋮
                         </button>
@@ -712,7 +679,7 @@ export default function KanbanBoard() {
         <div className="grid grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-4">
           <div className="lg:col-span-3">
             {/* Desktop / tablet table (hidden on mobile) */}
-            <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
+            {/* <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
               <table className="w-full min-w-[640px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border bg-card">
@@ -790,7 +757,6 @@ export default function KanbanBoard() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex items-center justify-center gap-2">
-                              {/* Employee Edit */}
                               <Button
                                 variant="ghost"
                                 // className="rounded-lg border border-border p-2 text-slate-500 hover:bg-slate-100"
@@ -799,7 +765,6 @@ export default function KanbanBoard() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
 
-                              {/* Employee Delete */}
                               <Button
                                 variant="ghost"
                                 className="text-muted-foreground hover:text-destructive"
@@ -809,7 +774,6 @@ export default function KanbanBoard() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
 
-                              {/* TL ONLY */}
                               {isTL && item.approval_status === "pending" && (
                                 <>
                                   <button
@@ -835,8 +799,102 @@ export default function KanbanBoard() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </div> */}
+            <div className="overflow-hidden rounded-md border border-border bg-card shadow-soft">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="text-nowrap">
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-nowrap pl-3"> Task Description</TableHead>
+                      <TableHead>Task (Related)</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Approval</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead className="pr-3 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projectTimesheets.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="h-15 text-center align-middle text-muted-foreground"
+                        >
+                          No results found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      projectTimesheets.map((item) => {
+                        const relatedTask = getTaskById(item.task_id);
+                        const hour = Math.floor(item.time_duration / 60);
+                        const minute = item.time_duration % 60;
 
+                        return (
+                          <TableRow key={item.id} className="text-muted-foreground">
+                            <TableCell>{item.task_description}</TableCell>
+                            <TableCell>{relatedTask ? relatedTask.title : <>-</>}</TableCell>
+                            <TableCell className="text-nowrap">
+                              {hour}hr {minute != 0 && <>{minute}min</>}
+                            </TableCell>
+
+                            <TableCell>
+                              {item.approval_status === "approved" ? (
+                                <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                  Approved
+                                </span>
+                              ) : item.approval_status === "rejected" ? (
+                                <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                                  Rejected
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                                  Pending
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {/* {new Date(item.created_at).toLocaleDateString()} */}
+                              {formatShortDate(item.created_at)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-center gap-2">
+                                <Button variant="ghost" onClick={() => handleEditTimesheet(item)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  className="text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleDeleteTimesheet(item.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                {isTL && item.approval_status === "pending" && (
+                                  <>
+                                    <Button
+                                      onClick={() => handleTimesheetApproval(item.id, "approved")}
+                                      className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
+                                    >
+                                      Approve
+                                    </Button>
+
+                                    <Button
+                                      onClick={() => handleTimesheetApproval(item.id, "rejected")}
+                                      className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+                                    >
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
             {/* Mobile stacked cards (hidden on sm and up) */}
             <div className="space-y-3 sm:hidden">
               {projectTimesheets.length === 0 ? (
