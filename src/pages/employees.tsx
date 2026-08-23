@@ -40,6 +40,7 @@ import { initials } from "@/lib/format";
 import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/ui-kit/loading-skeleton";
 
 export function EmployeesPage() {
   const [open, setOpen] = useState<boolean>(false);
@@ -47,6 +48,8 @@ export function EmployeesPage() {
   const [profile, setprofile] = useState<boolean>(false);
   const [proDetails, setproDetails] = useState<Employee>();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [loading, setloading] = useState<boolean>(true);
+
   const [query, setQuery] = useState<string>("");
   const [data, setData] = useState<Employee[]>();
   const visible = data?.filter((e) =>
@@ -61,11 +64,14 @@ export function EmployeesPage() {
     getEmployes();
   };
   const getEmployes = async () => {
+    setloading(true);
     const { data, error: err } = await connectSupabase.from("employee").select();
     if (err) {
       toast.error(err.message);
+      setloading(false);
     } else {
       setData(data);
+      setloading(false);
     }
   };
 
@@ -97,93 +103,97 @@ export function EmployeesPage() {
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="pl-6">Employee</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="pr-6 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible?.length == 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-15 text-center align-middle text-muted-foreground"
-                  >
-                    No results found
-                  </TableCell>
+          {loading ? (
+            <TableSkeleton />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="pl-6">Employee</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                visible?.map((e, idx) => (
-                  <TableRow key={idx} className="border-border">
-                    <TableCell className="pl-6 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage
-                            src={
-                              connectSupabase.storage
-                                .from("Employee")
-                                .getPublicUrl(e?.avatarUrl ?? "").data.publicUrl
-                            }
-                            alt={e.name}
-                          />
-                          <AvatarFallback>{initials(e.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="font-medium text-foreground">{e.name}</div>
-                          <div className="text-xs text-muted-foreground">{e.email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground capitalize">
-                      {e.department}
-                    </TableCell>
-                    <TableCell className="text-sm text-foreground capitalize">{e.role}</TableCell>
-                    <TableCell>
-                      <EmployeeStatusBadge status={e.status} />
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Row actions">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setprofile(true);
-                              setproDetails(e);
-                            }}
-                          >
-                            View Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedEmployee(e);
-                              seteditopen(true);
-                            }}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => deleteemploye(e.id)}
-                          >
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {visible?.length == 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-15 text-center align-middle text-muted-foreground"
+                    >
+                      No results found
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  visible?.map((e, idx) => (
+                    <TableRow key={idx} className="border-border">
+                      <TableCell className="pl-6 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage
+                              src={
+                                connectSupabase.storage
+                                  .from("Employee")
+                                  .getPublicUrl(e?.avatarUrl ?? "").data.publicUrl
+                              }
+                              alt={e.name}
+                            />
+                            <AvatarFallback>{initials(e.name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium text-foreground">{e.name}</div>
+                            <div className="text-xs text-muted-foreground">{e.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground capitalize">
+                        {e.department}
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground capitalize">{e.role}</TableCell>
+                      <TableCell>
+                        <EmployeeStatusBadge status={e.status} />
+                      </TableCell>
+                      <TableCell className="pr-6 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label="Row actions">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setprofile(true);
+                                setproDetails(e);
+                              }}
+                            >
+                              View Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedEmployee(e);
+                                seteditopen(true);
+                              }}
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => deleteemploye(e.id)}
+                            >
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
       <Modal

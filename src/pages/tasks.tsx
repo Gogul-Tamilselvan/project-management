@@ -32,6 +32,7 @@ import { formatShortDate, initials } from "@/lib/format";
 import type { Priority, Task, TaskStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/ui-kit/loading-skeleton";
 
 interface empName {
   id: string;
@@ -75,15 +76,19 @@ export function TasksPage() {
   const [project, setProject] = useState<proTitle[]>([]);
   const [empName, setEmpName] = useState<empName[]>([]);
   const [task, settask] = useState<TaskDetail[]>([]);
+  const [loading, setloading] = useState<boolean>(true);
 
   const getTasks = async () => {
+    setloading(true);
     const { data, error } = await connectSupabase
       .from("task")
       .select("*,projects(project_name),employee(name,avatarUrl)");
     if (error) {
       toast.error(error.message);
+      setloading(false);
     } else {
       settask(data);
+      setloading(false);
     }
   };
 
@@ -180,107 +185,111 @@ export function TasksPage() {
 
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="pl-6">Task</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Assignee</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Due date</TableHead>
-                <TableHead className="pr-6 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.length == 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-15 text-center align-middle text-muted-foreground"
-                  >
-                    No results found
-                  </TableCell>
+          {loading ? (
+            <TableSkeleton />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="pl-6">Task</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Assignee</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Due date</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
-              ) : (
-                visible?.map((t, idx) => {
-                  return (
-                    <TableRow key={idx} className="border-border">
-                      <TableCell className="pl-6 py-3.5">
-                        <div className="font-medium text-foreground">{t.title}</div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {t?.projects?.project_name}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-7 w-7">
-                            <AvatarImage
-                              src={
-                                connectSupabase.storage
-                                  .from("Employee")
-                                  .getPublicUrl(t?.employee?.avatarUrl).data.publicUrl
-                              }
-                              alt={t?.employee?.name}
-                            />
-                            <AvatarFallback className="text-[10px]">
-                              {initials(t.assigneeId ?? "")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm text-foreground">{t.employee.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <PriorityPill priority={t.priority} />
-                      </TableCell>
-                      <TableCell>
-                        <TaskStatusBadge status={t.status} />
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          {formatShortDate(t.dueDate)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setViewTask(true);
-                                settaskdetail(t);
-                              }}
-                            >
-                              Open
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditTask(true);
-                                settaskdetail(t);
-                              }}
-                            >
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => dropTask(t.id)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {visible.length == 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-15 text-center align-middle text-muted-foreground"
+                    >
+                      No results found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  visible?.map((t, idx) => {
+                    return (
+                      <TableRow key={idx} className="border-border">
+                        <TableCell className="pl-6 py-3.5">
+                          <div className="font-medium text-foreground">{t.title}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {t?.projects?.project_name}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage
+                                src={
+                                  connectSupabase.storage
+                                    .from("Employee")
+                                    .getPublicUrl(t?.employee?.avatarUrl).data.publicUrl
+                                }
+                                alt={t?.employee?.name}
+                              />
+                              <AvatarFallback className="text-[10px]">
+                                {initials(t.assigneeId ?? "")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-foreground">{t.employee.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <PriorityPill priority={t.priority} />
+                        </TableCell>
+                        <TableCell>
+                          <TaskStatusBadge status={t.status} />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            {formatShortDate(t.dueDate)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="pr-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setViewTask(true);
+                                  settaskdetail(t);
+                                }}
+                              >
+                                Open
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditTask(true);
+                                  settaskdetail(t);
+                                }}
+                              >
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => dropTask(t.id)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
 
@@ -671,33 +680,28 @@ function EditTask({
   }, [open, value]);
 
   const editTaskfun = async (id: string) => {
-     const updateData = {
-    title: editTask.title,
-    description: editTask.description ?? "",
-    projectId: editTask.projectId,
-    assigneeId: editTask.assigneeId,
-    dueDate: editTask.dueDate,
-    priority: editTask.priority,
-    status: editTask.status,
-    // emp_image: editTask.emp_image,
-    ...(editTask.status === "review" && {
-      approval_status: "pending" as const,
-    }),
-  };
+    const updateData = {
+      title: editTask.title,
+      description: editTask.description ?? "",
+      projectId: editTask.projectId,
+      assigneeId: editTask.assigneeId,
+      dueDate: editTask.dueDate,
+      priority: editTask.priority,
+      status: editTask.status,
+      // emp_image: editTask.emp_image,
+      ...(editTask.status === "review" && {
+        approval_status: "pending" as const,
+      }),
+    };
 
-    const { error } = await connectSupabase
-      .from("task")
-      .update(updateData)
-      .eq("id", id);
+    const { error } = await connectSupabase.from("task").update(updateData).eq("id", id);
 
     if (error) {
       toast.error(error.message);
     } else {
       onOpenChange(false);
       toast.success(
-        editTask.status === "review"
-        ? "Task submitted for TL approval"
-        : "Updated task",
+        editTask.status === "review" ? "Task submitted for TL approval" : "Updated task",
       );
     }
   };

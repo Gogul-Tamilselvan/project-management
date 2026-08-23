@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { connectSupabase } from "../../services/config";
 import { toast } from "sonner";
 import { Check, X, Clock, User, CalendarDays, AlertCircle, ClipboardCheck } from "lucide-react";
+import { CardsSkeleton } from "../ui-kit/loading-skeleton";
 
 interface Employee {
   id: string;
@@ -257,15 +258,7 @@ export default function TaskApprovalPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-[500px] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-border border-t-blue-600" />
-
-          <p className="mt-3 text-sm text-foreground">Loading task approvals...</p>
-        </div>
-      </div>
-    );
+    return <CardsSkeleton />;
   }
 
   if (!isTL) {

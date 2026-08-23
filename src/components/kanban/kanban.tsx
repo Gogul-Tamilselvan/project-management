@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { connectSupabase } from "../../services/config";
 import { useParams } from "react-router-dom";
-import { CalendarDays, Pencil, Trash2, X } from "lucide-react";
+import { CalendarDays, Pencil, Timer, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus, TimeSheetType } from "@/lib/types";
@@ -12,6 +12,8 @@ import { XCircle, Clock } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Table, TableHeader, TableRow, TableBody, TableHead, TableCell } from "../ui/table";
+import { CardsSkeleton, RowSkeleton } from "../ui-kit/loading-skeleton";
+import { Modal } from "../ui-kit/modal";
 
 interface KanbanTask {
   id: string;
@@ -259,52 +261,57 @@ export default function KanbanBoard() {
   };
 
   const handleSaveTimesheet = async () => {
-    if (!selectedTask) return;
+    if (!selectedTask?.id) return;
 
     const hoursPart = Number(hours);
     const minutesPart = Number(minutes);
 
     const totalMinutes = hoursPart * 60 + minutesPart;
 
-    if (editingTimesheet) {
-      // UPDATE existing entry
-      const { error } = await connectSupabase
-        .from("timesheets")
-        .update({
+    if (taskDescription != "" && hours != "" && minutes != "") {
+      if (editingTimesheet) {
+        // UPDATE existing entry
+        const { error } = await connectSupabase
+          .from("timesheets")
+          .update({
+            task_description: taskDescription,
+            time_duration: totalMinutes,
+          })
+          .eq("id", editingTimesheet.id);
+
+        if (error) {
+          console.error("Update error:", error);
+          toast.error("Failed to update timesheet entry");
+          return;
+        }
+
+        toast.success("Timesheet entry updated successfully");
+      } else {
+        // CREATE new entry
+        const { error } = await connectSupabase.from("timesheets").insert({
+          task_id: selectedTask.id,
           task_description: taskDescription,
           time_duration: totalMinutes,
-        })
-        .eq("id", editingTimesheet.id);
+          approval_status: "pending",
+        });
 
-      if (error) {
-        console.error("Update error:", error);
-        toast.error("Failed to update timesheet entry");
-        return;
+        if (error) {
+          console.error("Insert error:", error);
+          toast.error("Failed to add timesheet entry");
+          return;
+        }
+
+        toast.success("Timesheet entry added successfully");
       }
-
-      toast.success("Timesheet entry updated successfully");
-    } else {
-      // CREATE new entry
-      const { error } = await connectSupabase.from("timesheets").insert({
-        task_id: selectedTask.id,
-        task_description: taskDescription,
-        time_duration: totalMinutes,
-        approval_status: "pending",
-      });
-
-      if (error) {
-        console.error("Insert error:", error);
-        toast.error("Failed to add timesheet entry");
-        return;
-      }
-
-      toast.success("Timesheet entry added successfully");
-    }
+    } else toast.error("Enter fields");
 
     fetchTimesheets();
 
     setIsTimesheetOpen(false);
     setEditingTimesheet(null);
+    setTaskDescription("");
+    setHours("");
+    setMinutes("");
   };
 
   const handleDeleteTimesheet = async (timesheetId: string) => {
@@ -403,9 +410,11 @@ export default function KanbanBoard() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <p>Loading tasks...</p>
-      </div>
+      <>
+        <RowSkeleton cols={1} />
+        <div className="m-3"></div>
+        <CardsSkeleton count={4} />
+      </>
     );
   }
 
@@ -418,7 +427,7 @@ export default function KanbanBoard() {
   }
 
   return (
-    <div className="min-h-screen  p-4 md:p-6">
+    <div className="min-h-screen">
       <div className="flex items-center justify-between flex-wrap">
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Kanban Board</h1>
@@ -458,9 +467,9 @@ export default function KanbanBoard() {
               </Avatar>
             ))}
 
-            {tasks.length - 3 != 0 && (
+            {tasks.length - 5 > 0 && (
               <AvatarGroupCount className="bg-muted-foreground">
-                {tasks.length - 3}
+                +{tasks.length - 5}
               </AvatarGroupCount>
             )}
 
@@ -485,24 +494,28 @@ export default function KanbanBoard() {
               badge: "bg-blue-100 text-blue-700",
               border: "border-blue-200",
               top: "border-t-blue-500",
+              bg: "bg-blue-50 dark:bg-blue-950/20",
             },
             in_progress: {
               header: "text-orange-600",
               badge: "bg-orange-100 text-orange-700",
               border: "border-orange-200",
               top: "border-t-orange-500",
+              bg: "bg-orange-50 dark:bg-orange-950/20",
             },
             review: {
               header: "text-purple-600",
               badge: "bg-purple-100 text-purple-700",
               border: "border-purple-200",
               top: "border-t-purple-500",
+              bg: "bg-purple-50 dark:bg-purple-950/20",
             },
             completed: {
               header: "text-green-600",
               badge: "bg-green-100 text-green-700",
               border: "border-green-200",
               top: "border-t-green-500",
+              bg: "bg-green-50 dark:bg-green-950/20",
             },
           };
           const style = columnStyles[column.id];
@@ -516,24 +529,22 @@ export default function KanbanBoard() {
               onDrop={() => {
                 handleDrop(column.id);
               }}
-              className={` flex min-h-[500px] flex-col  bg-card rounded-xl border shadow-sm border-t-4 ${style.top} transition-all `}
+              className={` flex min-h-[500px] flex-col rounded-md border shadow-sm ${style.bg} transition-all bg-card `}
             >
               <div className="flex items-center justify-between border-b border-border px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <h2 className={`font-semibold ${style.header}`}>{column.title}</h2>
+                <div className="flex items-center justify-between w-full">
+                  <h2 className={`font-semibold ${style.header}`}>{column.title.toUpperCase()}</h2>
 
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${style.badge} `}
-                  >
+                  <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${style.badge} `}>
                     {columnTasks.length}
                   </span>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-3 p-4">
+              <div className="flex-1 space-y-3 p-2">
                 {columnTasks.length === 0 ? (
                   <div
-                    className={` flex min-h-[180px] items-center justify-center rounded-lg border border-dashed ${style.border} bg-card shadow-soft `}
+                    className={` flex min-h-[180px] items-center justify-center rounded-lg border ${style.border} bg-card shadow-soft `}
                   >
                     <div className="text-center">
                       <div className="mb-2 text-2xl ">+</div>
@@ -550,11 +561,11 @@ export default function KanbanBoard() {
                       draggable={task.status !== "completed"}
                       onDragStart={() => task.status !== "completed" && handleDragStart(task)}
                       onDragEnd={() => setDraggedTask(null)}
-                      className="group cursor-grab  rounded-xl border border-border  bg-card shadow-soft p-4   transition-all duration-200  hover:-translate-y-0.5  hover:shadow-md  active:cursor-grabbing  "
+                      className={`group cursor-grab  rounded-md border border-border  bg-card shadow-soft p-4   transition-all duration-200  hover:-translate-y-0.5  hover:shadow-md  active:cursor-grabbing ${draggedTask ? "opacity-100" : null}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-sm font-semibold leading-5  text-foreground ">
-                          {`Title: ${task.title}`}
+                          {`${task.title}`}
                         </h3>
 
                         <button
@@ -566,7 +577,7 @@ export default function KanbanBoard() {
                       </div>
                       {task.description && (
                         <p className="mt-2 line-clamp-3 text-sm leading-5 text-slate-500">
-                          {`Description: ${task.description}`}
+                          {` ${task.description}`}
                         </p>
                       )}
 
@@ -575,7 +586,7 @@ export default function KanbanBoard() {
                         (task.status === "review" && task.approval_status === "pending") ||
                         (task.status === "completed" && task.approval_status === "approved") ||
                         (task.approval_status === "rejected" && task.rejection_reason)) && (
-                        <div className="mt-4 flex items-center gap-1.5">
+                        <div className="mt-4 mb-4 flex items-center gap-1.5">
                           {task.priority && (
                             <span
                               className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
@@ -615,34 +626,37 @@ export default function KanbanBoard() {
                           )}
                         </div>
                       )}
-                      <div className="my-4 border-t border-border" />
+                      {/* <div className="my-4 border-t border-border" /> */}
 
-                      {task.dueDate && (
-                        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          {formatShortDate(task.dueDate)}
-                        </span>
-                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage
+                              src={
+                                connectSupabase.storage
+                                  .from("Employee")
+                                  .getPublicUrl(task?.employee.avatarUrl ?? "").data.publicUrl
+                              }
+                            />
+                            <AvatarFallback className="text-[10px]">
+                              {initials(task.employee.name ?? "")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-foreground">{task.employee.name}</span>
+                        </div>
 
-                      <div className="mt-3 flex items-center gap-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage
-                            src={
-                              connectSupabase.storage
-                                .from("Employee")
-                                .getPublicUrl(task?.employee.avatarUrl ?? "").data.publicUrl
-                            }
-                          />
-                          <AvatarFallback className="text-[10px]">
-                            {initials(task.employee.name ?? "")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-foreground">{task.employee.name}</span>
+                        {task.dueDate && (
+                          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            {formatShortDate(task.dueDate)}
+                          </span>
+                        )}
                       </div>
-                      <div className="mt-4 border-t pt-3">
+
+                      <div className="mt-4">
                         <Button
                           //  variant={"secondary"}
-                          className="mt-4 w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                          className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
                           onClick={() => {
                             setSelectedTask(task);
                             setTaskDescription("");
@@ -652,7 +666,8 @@ export default function KanbanBoard() {
                             setIsTimesheetOpen(true);
                           }}
                         >
-                          ⏱ Add Timesheet
+                          <Timer />
+                          New Timesheet
                         </Button>
                       </div>
                     </div>
@@ -996,107 +1011,177 @@ export default function KanbanBoard() {
         </div>
       </div>
       {isTimesheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="w-[550px] rounded-xl bg-card p-6 shadow-xl">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">
-                {editingTimesheet ? "Edit Timesheet" : "Add Timesheet"}
-              </h2>
-
-              <Button
-                // type="button"
-                onClick={() => {
-                  setIsTimesheetOpen(false);
-                  setEditingTimesheet(null);
-                }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition  hover:text-white bg-card hover:bg-red-500 focus:outline-none"
-              >
-                <X size={18} />
+        <Modal
+          onOpenChange={setIsTimesheetOpen}
+          open={isTimesheetOpen}
+          title={editingTimesheet ? "Edit Timesheet" : "Add Timesheet"}
+          footer={
+            <>
+              <Button variant={"ghost"} onClick={() => setIsTimesheetOpen(false)}>
+                Cancel
               </Button>
+              <Button onClick={handleSaveTimesheet} disabled={!!editingTimesheet && !isChanged}>
+                {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
+              </Button>
+            </>
+          }
+        >
+          <form className="grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={handleSaveTimesheet}>
+            <div className="sm:col-span-2">
+              <label className="mb-2 block font-medium text-foreground">Task Description</label>
+              <Textarea
+                rows={5}
+                value={taskDescription}
+                onChange={(e) => {
+                  setTaskDescription(e.target.value);
+                  setIsChanged(true);
+                }}
+                placeholder="Enter task description..."
+              />
             </div>
 
-            <div className="space-y-5 text-muted-foreground">
-              <div>
-                <label className="mb-2 block font-medium text-foreground">Task Description</label>
-                <Textarea
-                  rows={5}
-                  value={taskDescription}
-                  onChange={(e) => {
-                    setTaskDescription(e.target.value);
-                    setIsChanged(true);
-                  }}
-                  // className="w-full rounded-lg border p-3"
-                  placeholder="Enter task description..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block font-medium">Hours</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={hours}
-                    onChange={(e) => {
-                      setHours(e.target.value);
-                      setIsChanged(true);
-                    }}
-                    className="
-                      [appearance:textfield]
-                      [&::-webkit-inner-spin-button]:appearance-none
-                      [&::-webkit-outer-spin-button]:appearance-none
-                    "
-                    // className="w-full rounded-lg border border-border p-3 focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. 2"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-medium">Minutes</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={minutes}
-                    onChange={(e) => {
-                      setMinutes(e.target.value);
-                      setIsChanged(true);
-                    }}
-                    className="
-                      [appearance:textfield]
-                      [&::-webkit-inner-spin-button]:appearance-none
-                      [&::-webkit-outer-spin-button]:appearance-none
-                    "
-                    // className="w-full rounded-lg border border-border p-3 focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. 30"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant={"ghost"}
-                  onClick={() => setIsTimesheetOpen(false)}
-                  // className="rounded-lg border px-5 py-2"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSaveTimesheet}
-                  disabled={!!editingTimesheet && !isChanged}
-                  // className={`rounded-lg px-5 py-2 text-white ${
-                  //   editingTimesheet && !isChanged
-                  //     ? "cursor-not-allowed bg-gray-300"
-                  //     : "bg-blue-600 hover:bg-blue-700"
-                  // }`}
-                >
-                  {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
-                </Button>
-              </div>
+            <div>
+              <label className="mb-2 block font-medium">Hours</label>
+              <Input
+                type="number"
+                min={0}
+                value={hours}
+                onChange={(e) => {
+                  setHours(e.target.value);
+                  setIsChanged(true);
+                }}
+                className="
+                        [appearance:textfield]
+                        [&::-webkit-inner-spin-button]:appearance-none
+                        [&::-webkit-outer-spin-button]:appearance-none
+                      "
+                placeholder="e.g. 2"
+              />
             </div>
-          </div>
-        </div>
+
+            <div>
+              <label className="mb-2 block font-medium">Minutes</label>
+              <Input
+                type="number"
+                min={0}
+                max={59}
+                value={minutes}
+                onChange={(e) => {
+                  setMinutes(e.target.value);
+                  setIsChanged(true);
+                }}
+                className="
+                        [appearance:textfield]
+                        [&::-webkit-inner-spin-button]:appearance-none
+                        [&::-webkit-outer-spin-button]:appearance-none
+                      "
+                placeholder="e.g. 30"
+              />
+            </div>
+          </form>
+        </Modal>
       )}
+      {/* <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+            <div className="w-[550px] rounded-xl bg-card p-6 shadow-xl">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  {editingTimesheet ? "Edit Timesheet" : "Add Timesheet"}
+                </h2>
+
+                <Button
+                  // type="button"
+                  onClick={() => {
+                    setIsTimesheetOpen(false);
+                    setEditingTimesheet(null);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition  hover:text-white bg-card hover:bg-red-500 focus:outline-none"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+
+              <div className="space-y-5 text-muted-foreground">
+                <div>
+                  <label className="mb-2 block font-medium text-foreground">Task Description</label>
+                  <Textarea
+                    rows={5}
+                    value={taskDescription}
+                    onChange={(e) => {
+                      setTaskDescription(e.target.value);
+                      setIsChanged(true);
+                    }}
+                    // className="w-full rounded-lg border p-3"
+                    placeholder="Enter task description..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-2 block font-medium">Hours</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={hours}
+                      onChange={(e) => {
+                        setHours(e.target.value);
+                        setIsChanged(true);
+                      }}
+                      className="
+                        [appearance:textfield]
+                        [&::-webkit-inner-spin-button]:appearance-none
+                        [&::-webkit-outer-spin-button]:appearance-none
+                      "
+                      // className="w-full rounded-lg border border-border p-3 focus:border-blue-500 focus:outline-none"
+                      placeholder="e.g. 2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block font-medium">Minutes</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={minutes}
+                      onChange={(e) => {
+                        setMinutes(e.target.value);
+                        setIsChanged(true);
+                      }}
+                      className="
+                        [appearance:textfield]
+                        [&::-webkit-inner-spin-button]:appearance-none
+                        [&::-webkit-outer-spin-button]:appearance-none
+                      "
+                      // className="w-full rounded-lg border border-border p-3 focus:border-blue-500 focus:outline-none"
+                      placeholder="e.g. 30"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant={"ghost"}
+                    onClick={() => setIsTimesheetOpen(false)}
+                    // className="rounded-lg border px-5 py-2"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveTimesheet}
+                    disabled={!!editingTimesheet && !isChanged}
+                    // className={`rounded-lg px-5 py-2 text-white ${
+                    //   editingTimesheet && !isChanged
+                    //     ? "cursor-not-allowed bg-gray-300"
+                    //     : "bg-blue-600 hover:bg-blue-700"
+                    // }`}
+                  >
+                    {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div> */}
+
       {rejectionModalTask && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"

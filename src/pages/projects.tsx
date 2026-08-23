@@ -18,6 +18,7 @@ import type { ProjectStatus, Project } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { CardSkeleton, CardsSkeleton, RowSkeleton } from "@/components/ui-kit/loading-skeleton";
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
@@ -50,6 +51,7 @@ export function ProjectsPage() {
   const [mode, setMode] = useState<"create" | "edit" | "view">("create");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [loading, setloading] = useState<boolean>(true);
 
   const totalPercent = async (id: string): Promise<number> => {
     const { data } = await connectSupabase.from("task").select("status").eq("projectId", id);
@@ -116,6 +118,7 @@ export function ProjectsPage() {
   };
 
   const getProjects = async () => {
+    setloading(true);
     const { data: projectdt, error } = await connectSupabase
       .from("projects")
       .select("*")
@@ -123,6 +126,8 @@ export function ProjectsPage() {
 
     if (error) {
       console.log(error);
+      setloading(false);
+
       return;
     }
 
@@ -140,6 +145,7 @@ export function ProjectsPage() {
     );
 
     setProjects(formattedProjects);
+    setloading(false);
   };
 
   const visible = projects.filter(
@@ -198,7 +204,9 @@ export function ProjectsPage() {
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <CardsSkeleton count={4} />
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
           title="No projects found"
