@@ -21,16 +21,36 @@ const taskMap: Record<TaskStatus, { label: string; cls: string }> = {
 };
 
 const priorityMap: Record<Priority, { label: string; cls: string; dot: string }> = {
-  low: { label: "Low", cls: "bg-muted text-muted-foreground ring-border", dot: "bg-muted-foreground/50" },
+  low: {
+    label: "Low",
+    cls: "bg-muted text-muted-foreground ring-border",
+    dot: "bg-muted-foreground/50",
+  },
   medium: { label: "Medium", cls: "bg-info/15 text-info ring-info/25", dot: "bg-info" },
-  high: { label: "High", cls: "bg-warning/15 text-warning-foreground ring-warning/30", dot: "bg-warning" },
-  urgent: { label: "Urgent", cls: "bg-destructive/12 text-destructive ring-destructive/25", dot: "bg-destructive" },
+  high: {
+    label: "High",
+    cls: "bg-warning/15 text-warning-foreground ring-warning/30",
+    dot: "bg-warning",
+  },
+  urgent: {
+    label: "Urgent",
+    cls: "bg-destructive/12 text-destructive ring-destructive/25",
+    dot: "bg-destructive",
+  },
 };
 
 const employeeMap: Record<EmployeeStatus, { label: string; cls: string; dot: string }> = {
   active: { label: "Active", cls: "bg-success/15 text-success ring-success/25", dot: "bg-success" },
-  away: { label: "Away", cls: "bg-warning/15 text-warning-foreground ring-warning/30", dot: "bg-warning" },
-  offline: { label: "Offline", cls: "bg-muted text-muted-foreground ring-border", dot: "bg-muted-foreground/60" },
+  away: {
+    label: "Away",
+    cls: "bg-warning/15 text-warning-foreground ring-warning/30",
+    dot: "bg-warning",
+  },
+  offline: {
+    label: "Offline",
+    cls: "bg-muted text-muted-foreground ring-border",
+    dot: "bg-muted-foreground/60",
+  },
 };
 
 export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
@@ -38,8 +58,7 @@ export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   return <span className={cn(base, cls)}>{label}</span>;
 }
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {
- 
-  const { label, cls } = taskMap[status] || taskMap.todo;
+  const { label, cls } = taskMap[status];
   return <span className={cn(base, cls)}>{label}</span>;
 }
 export function PriorityPill({ priority }: { priority: Priority }) {

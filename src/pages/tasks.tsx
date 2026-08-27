@@ -29,10 +29,12 @@ import {
 import { Modal } from "@/components/ui-kit/modal";
 import { PriorityPill, TaskStatusBadge } from "@/components/ui-kit/status-badges";
 import { formatShortDate, initials } from "@/lib/format";
-import type { Priority, Task, TaskStatus } from "@/lib/types";
+import type { EmailAlertType, Priority, Task, TaskStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/ui-kit/loading-skeleton";
+import { getCurrentUserRoleService, getUserEmailEmp } from "@/services/AuthService";
+import { EmailAlertFunction } from "@/services/emailAlert";
 
 interface empName {
   id: string;
@@ -337,7 +339,7 @@ function CreateTaskModal({
     dueDate: "",
   });
 
-  const [assigneemail, setassigneemail] = useState("");
+  // const [assigneemail, setassigneemail] = useState("");
 
   const resetForm = () => {
     setprojectDetail({
@@ -357,8 +359,7 @@ function CreateTaskModal({
       projectDetail.title != "" &&
       projectDetail.description != "" &&
       projectDetail.dueDate != "" &&
-      projectDetail.assigneeId != "" &&
-      assigneemail !== ""
+      projectDetail.assigneeId != ""
     ) {
       const { error } = await connectSupabase.from("task").insert({
         title: projectDetail.title,
@@ -370,48 +371,33 @@ function CreateTaskModal({
         status: projectDetail.status,
       });
 
-      // if (error) {
-      //   toast.error(error.message);
-      // } else {
-      //   onOpenChange(false);
-      //   toast.success("Task created");
-      // }
-
       if (error) {
         toast.error(error.message);
-        return;
-      }
+      } else {
+        const checkRole = await getCurrentUserRoleService();
+        const getEmpEmail = await getUserEmailEmp(projectDetail.assigneeId);
 
-      const { error: emailError } = await connectSupabase.functions.invoke("send-task-email",
-        {
-          body: {
-            email: assigneemail,
-            taskTitle: projectDetail.title,
-            description: projectDetail.description,
+        if (checkRole?.role === "TL") {
+          const payload: EmailAlertType = {
+            email: getEmpEmail?.email,
+            from_email: checkRole.email,
+            name: checkRole.name,
             priority: projectDetail.priority,
-            dueDate: projectDetail.dueDate,
-          },
-        });
-
-      if (emailError) {
-        console.error("Email error:", emailError);
-        toast.error("Task created, but email could not be sent.");
-        return;
+            task_description: projectDetail.description ?? "",
+            task_title: projectDetail.title,
+            team_lead_initial: initials(checkRole.name),
+            team_lead_name: checkRole.name,
+            to_email: getEmpEmail?.email,
+            created_date: new Date().toISOString(),
+            due_date: projectDetail.dueDate,
+            task_url: "",
+          };
+          EmailAlertFunction(payload);
+        }
+        onOpenChange(false);
+        resetForm();
+        toast.success("Task created");
       }
-
-      onOpenChange(false);
-      toast.success("Task created and email sent successfully!");
-
-      setprojectDetail({
-        assigneeId: "",
-        dueDate: "",
-        id: "",
-        priority: "" as Priority,
-        projectId: "",
-        status: "" as TaskStatus,
-        title: "",
-        description: "",
-      });
     }
   };
 
@@ -498,11 +484,7 @@ function CreateTaskModal({
             value={projectDetail.assigneeId}
             required
             onValueChange={(val) => {
-              const SelectedEmployee = empName.find((employee) => employee.id === val);
               setprojectDetail((prev) => ({ ...prev, assigneeId: val }));
-              setassigneemail(SelectedEmployee?.email ?? "")
-              console.log(" user:", SelectedEmployee?.name);
-              console.log("email:", SelectedEmployee?.email);
             }}
           >
             <SelectTrigger className="mt-1.5">
