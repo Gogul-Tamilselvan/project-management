@@ -1,4 +1,4 @@
-export type ProjectStatus = "todo" | "in_progress" | "review" | "completed";
+export type ProjectStatus = "todo" | "planning" | "in_progress" | "review" | "on_hold" | "completed";
 export type TaskStatus = "todo" | "in_progress" | "review" | "completed";
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type EmployeeStatus = "active" | "away" | "offline";
@@ -47,7 +47,7 @@ export interface Activity {
   timestamp: string; // ISO
 }
 
-// export interface CurrentUser extends Employee {}
+export interface CurrentUser extends Employee {}
 
 export interface UserDataType {
   email: string;

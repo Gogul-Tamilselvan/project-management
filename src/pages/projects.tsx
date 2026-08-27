@@ -22,9 +22,11 @@ import { CardSkeleton, CardsSkeleton, RowSkeleton } from "@/components/ui-kit/lo
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
+  { label: "Planning", value: "planning" },
   { label: "In Progress", value: "in_progress" },
   { label: "To Do", value: "todo" },
   { label: "Review", value: "review" },
+  { label: "On Hold", value: "on_hold" },
   { label: "Completed", value: "completed" },
 ];
 
@@ -32,10 +34,14 @@ const getProgressByStatus = (status: ProjectStatus): number => {
   switch (status) {
     case "todo":
       return 0;
+    case "planning":
+      return 15;
     case "in_progress":
       return 50;
     case "review":
       return 75;
+    case "on_hold":
+      return 30;
     case "completed":
       return 100;
     default:

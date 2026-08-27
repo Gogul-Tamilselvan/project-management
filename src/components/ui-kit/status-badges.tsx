@@ -6,8 +6,10 @@ const base =
 
 const projectMap: Record<ProjectStatus, { label: string; cls: string }> = {
   todo: { label: "To do", cls: "bg-muted text-muted-foreground ring-border" },
+  planning: { label: "Planning", cls: "bg-info/15 text-info ring-info/25" },
   in_progress: { label: "In progress", cls: "bg-primary-soft text-primary ring-primary/20" },
   review: { label: "In review", cls: "bg-warning/15 text-warning-foreground ring-warning/30" },
+  on_hold: { label: "On hold", cls: "bg-muted text-muted-foreground ring-border" },
   completed: { label: "Completed", cls: "bg-success/15 text-success ring-success/25" },
 };
 
