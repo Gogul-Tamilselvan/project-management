@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,23 +14,147 @@ import {
 import { ProjectCard } from "@/components/ui-kit/project-card";
 import { Modal } from "@/components/ui-kit/modal";
 import { EmptyState } from "@/components/ui-kit/empty-state";
-import { mockProjects } from "@/lib/mock/projects";
-import type { ProjectStatus } from "@/lib/types";
+import type { ProjectStatus, Project } from "@/lib/types";
+import { connectSupabase } from "@/services/config";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { CardSkeleton, CardsSkeleton, RowSkeleton } from "@/components/ui-kit/loading-skeleton";
 
 const filters: Array<{ label: string; value: ProjectStatus | "all" }> = [
   { label: "All", value: "all" },
-  { label: "In progress", value: "in_progress" },
   { label: "Planning", value: "planning" },
-  { label: "On hold", value: "on_hold" },
+  { label: "In Progress", value: "in_progress" },
+  { label: "To Do", value: "todo" },
+  { label: "Review", value: "review" },
+  { label: "On Hold", value: "on_hold" },
   { label: "Completed", value: "completed" },
 ];
 
+const getProgressByStatus = (status: ProjectStatus): number => {
+  switch (status) {
+    case "todo":
+      return 0;
+    case "planning":
+      return 15;
+    case "in_progress":
+      return 50;
+    case "review":
+      return 75;
+    case "on_hold":
+      return 30;
+    case "completed":
+      return 100;
+    default:
+      return 0;
+  }
+};
 export function ProjectsPage() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<ProjectStatus | "all">("all");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [mode, setMode] = useState<"create" | "edit" | "view">("create");
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [loading, setloading] = useState<boolean>(true);
 
-  const visible = mockProjects.filter(
+  const totalPercent = async (id: string): Promise<number> => {
+    const { data } = await connectSupabase.from("task").select("status").eq("projectId", id);
+    if (data) {
+      const dt = data.map((v) => getProgressByStatus(v.status)).reduce((acc, count) => count + acc);
+      return Math.ceil(dt / 3);
+    }
+    return 0;
+  };
+
+  useEffect(() => {
+    getProjects();
+  }, []);
+
+  const handleDelete = async () => {
+    if (!selectedProject) return;
+
+    // Check whether this project has assigned tasks
+    const { data: tasks, error: taskError } = await connectSupabase
+      .from("task")
+      .select("id")
+      .eq("projectId", selectedProject.id);
+
+    if (taskError) {
+      console.error("Task check error:", taskError);
+      toast.error("Unable to check project tasks");
+      return;
+    }
+
+    // Project has assigned tasks
+    if (tasks && tasks.length > 0) {
+      toast.error("Tasks assigned to this project");
+
+      setIsDeleteOpen(false);
+      setSelectedProject(null);
+      return;
+    }
+    // Delete project if no tasks are assigned
+    const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
+
+    if (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete project");
+      return;
+    }
+
+    toast.success("Project deleted successfully");
+
+    setIsDeleteOpen(false);
+    setSelectedProject(null);
+
+    getProjects();
+  };
+
+  const handleEdit = (project: Project) => {
+    setMode("edit");
+    setEditingProject(project);
+    setOpen(true);
+  };
+
+  const navigate = useNavigate();
+  const handleView = (project: Project) => {
+    navigate(`/projects/${project.id}`);
+  };
+
+  const getProjects = async () => {
+    setloading(true);
+    const { data: projectdt, error } = await connectSupabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.log(error);
+      setloading(false);
+
+      return;
+    }
+
+    const formattedProjects: Project[] = await Promise.all(
+      projectdt.map(async (item) => ({
+        id: item.id,
+        name: item.project_name,
+        description: item.description,
+        status: item.status,
+        progress: await totalPercent(item.id),
+        startDate: item.start_date,
+        dueDate: item.end_date,
+        teamIds: [],
+      })),
+    );
+
+    setProjects(formattedProjects);
+    setloading(false);
+  };
+
+  const visible = projects.filter(
     (p) =>
       (status === "all" || p.status === status) &&
       (query === "" || p.name.toLowerCase().includes(query.toLowerCase())),
@@ -45,7 +169,14 @@ export function ProjectsPage() {
             Plan, track, and ship every initiative across your workspace.
           </p>
         </div>
-        <Button className="gap-1.5" onClick={() => setOpen(true)}>
+        <Button
+          className="gap-1.5"
+          onClick={() => {
+            setEditingProject(null);
+            setMode("create");
+            setOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" /> Create project
         </Button>
       </div>
@@ -79,7 +210,9 @@ export function ProjectsPage() {
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <CardsSkeleton count={4} />
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
           title="No projects found"
@@ -89,13 +222,59 @@ export function ProjectsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((p) => (
-            <ProjectCard key={p.id} project={p} onView={() => console.log("view", p.id)} />
-          ))}
+          {visible.map((p) => {
+            return (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                onEdit={handleEdit}
+                onDelete={() => {
+                  setSelectedProject(p);
+                  setIsDeleteOpen(true);
+                }}
+                onView={handleView}
+              />
+            );
+          })}
         </div>
       )}
 
-      <CreateProjectModal open={open} onOpenChange={setOpen} />
+      <CreateProjectModal
+        open={open}
+        onOpenChange={setOpen}
+        onCreate={getProjects}
+        editingProject={editingProject}
+        mode={mode}
+        resetModal={() => {
+          setEditingProject(null);
+          setMode("create");
+        }}
+      />
+      {isDeleteOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
+            <h2 className="text-xl font-bold">Delete Project</h2>
+
+            <p className="mt-3">Are you sure you want to delete this project?</p>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteOpen(false);
+                  setSelectedProject(null);
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button variant="destructive" onClick={handleDelete}>
+                Yes Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -103,68 +282,265 @@ export function ProjectsPage() {
 function CreateProjectModal({
   open,
   onOpenChange,
+  onCreate,
+  editingProject,
+  mode,
+  resetModal,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onCreate: () => void;
+  resetModal: () => void;
+  editingProject: Project | null;
+  mode: "create" | "edit" | "view";
 }) {
+  interface ProjectFormData {
+    id: string;
+    name: string;
+    description: string;
+    status: ProjectStatus;
+    progress: number;
+    startDate: string;
+    dueDate: string;
+    teamIds: string[];
+  }
+
+  const initialFormData: ProjectFormData = {
+    id: "",
+    name: "",
+    description: "",
+    status: "todo",
+    progress: 0,
+    startDate: "",
+    dueDate: "",
+    teamIds: [],
+  };
+
+  const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
+  const [originalData, setOriginalData] = useState<ProjectFormData | null>(initialFormData);
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setOriginalData(initialFormData);
+  };
+
+  useEffect(() => {
+    if (editingProject) {
+      const projectData = {
+        id: editingProject.id,
+        name: editingProject.name,
+        description: editingProject.description,
+        status: editingProject.status,
+        progress: editingProject.progress,
+        startDate: editingProject.startDate,
+        dueDate: editingProject.dueDate,
+        teamIds: editingProject.teamIds,
+      };
+
+      setFormData(projectData);
+      setOriginalData(projectData);
+    } else {
+      setFormData(initialFormData);
+      setOriginalData(initialFormData);
+    }
+  }, [editingProject]);
+
+  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (mode === "view") return;
+
+    if (editingProject) {
+      // UPDATE PROJECT
+      const { error } = await connectSupabase
+        .from("projects")
+        .update({
+          project_name: formData.name,
+          description: formData.description,
+          status: formData.status,
+          start_date: formData.startDate,
+          end_date: formData.dueDate,
+        })
+        .eq("id", editingProject.id);
+
+      if (error) {
+        console.error("Update Error:", error);
+        return;
+      } else toast.success("Project updated successfully");
+    } else {
+      // CREATE PROJECT
+
+      const { error } = await connectSupabase.from("projects").insert({
+        project_name: formData.name,
+        description: formData.description,
+        status: formData.status,
+        start_date: formData.startDate,
+        end_date: formData.dueDate,
+      });
+
+      if (error) {
+        console.error("Insert Error:", error);
+        return;
+      } else toast.success("Project created successfully");
+    }
+
+    // Refresh project list
+    onCreate();
+
+    // Reset form
+    resetForm();
+
+    resetModal();
+
+    // Close modal
+    onOpenChange(false);
+  };
+
   return (
     <Modal
       open={open}
-      onOpenChange={onOpenChange}
-      title="Create new project"
-      description="Set up a new project. You can invite team members after creating."
+      onOpenChange={(value) => {
+        if (!value) {
+          resetForm();
+          resetModal();
+        }
+        onOpenChange(value);
+      }}
+      title={
+        mode === "create"
+          ? "Create New Project"
+          : mode === "edit"
+            ? "Edit Project"
+            : "Project Details"
+      }
+      description={
+        mode === "create"
+          ? "Set up a new project. You can invite team members after creating."
+          : mode === "edit"
+            ? "Update your project details."
+            : "View project information."
+      }
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
           <Button
-            onClick={(e) => {
-              e.preventDefault();
-              console.log("create project (mock)");
+            variant="ghost"
+            onClick={() => {
+              resetForm();
+              resetModal();
               onOpenChange(false);
             }}
           >
-            Create project
+            {mode === "view" ? "Close" : "Cancel"}
           </Button>
+          {mode !== "view" && (
+            <Button type="submit" form="project-form" disabled={mode === "edit" && !hasChanges}>
+              {mode === "create" ? "Create Project" : "Update Project"}
+            </Button>
+          )}
         </>
       }
     >
       <form
+        id="project-form"
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={handleSubmit}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="p-name">Project name</Label>
-          <Input id="p-name" placeholder="e.g. Mobile App v3" className="mt-1.5" />
+          <Label htmlFor="p-name">
+            Project name <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="p-name"
+            placeholder="e.g. Mobile App v3"
+            className="mt-1.5"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            readOnly={mode === "view"}
+            required
+          />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="p-desc">Description</Label>
+          <Label htmlFor="p-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
           <Textarea
             id="p-desc"
             placeholder="What is this project about?"
             className="mt-1.5"
             rows={3}
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            readOnly={mode === "view"}
+            required
           />
         </div>
         <div>
-          <Label htmlFor="p-start">Start date</Label>
-          <Input id="p-start" type="date" className="mt-1.5" />
+          <Label htmlFor="p-start">
+            Start date <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="p-start"
+            type="date"
+            className="mt-1.5"
+            name="startDate"
+            value={formData.startDate}
+            onChange={handleChange}
+            onClick={(e) => {
+              (e.currentTarget as HTMLInputElement).showPicker?.();
+            }}
+            readOnly={mode === "view"}
+            required
+          />
         </div>
         <div>
-          <Label htmlFor="p-end">End date</Label>
-          <Input id="p-end" type="date" className="mt-1.5" />
+          <Label htmlFor="p-end">
+            End date <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="p-end"
+            type="date"
+            className="mt-1.5"
+            name="dueDate"
+            value={formData.dueDate}
+            onChange={handleChange}
+            onClick={(e) => {
+              (e.currentTarget as HTMLInputElement).showPicker?.();
+            }}
+            readOnly={mode === "view"}
+            required
+          />
         </div>
         <div className="sm:col-span-2">
           <Label>Status</Label>
-          <Select defaultValue="planning">
+          <Select
+            value={formData.status}
+            disabled={mode === "view"}
+            onValueChange={(value: string) =>
+              setFormData((prev) => ({
+                ...prev,
+                status: value as ProjectStatus,
+              }))
+            }
+          >
             <SelectTrigger className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
+
             <SelectContent>
-              <SelectItem value="planning">Planning</SelectItem>
-              <SelectItem value="in_progress">In progress</SelectItem>
-              <SelectItem value="on_hold">On hold</SelectItem>
+              <SelectItem value="todo">To Do</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="review">Review</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>

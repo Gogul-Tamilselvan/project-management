@@ -1,5 +1,13 @@
 import { Link } from "react-router-dom";
-import { FolderKanban, Users, Clock, CheckCircle2, ArrowRight, Plus, CalendarDays } from "lucide-react";
+import {
+  FolderKanban,
+  Users,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+  Plus,
+  CalendarDays,
+} from "lucide-react";
 import { SummaryCard } from "@/components/ui-kit/summary-card";
 import { ProgressBar } from "@/components/ui-kit/progress-bar";
 import {
@@ -17,12 +25,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { mockProjects } from "@/lib/mock/projects";
 import { mockTasks } from "@/lib/mock/tasks";
-import { mockEmployees, mockCurrentUser } from "@/lib/mock/employees";
+import { mockCurrentUser } from "@/lib/mock/employees";
 import { mockActivities } from "@/lib/mock/activities";
 import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials, relativeTime } from "@/lib/format";
+import { connectSupabase } from "@/services/config";
+import { useEffect, useState } from "react";
+import { Task } from "@/lib/types";
 
 const activityIcon = {
   project_created: FolderKanban,
@@ -40,19 +50,127 @@ const activityTint = {
   project_updated: "bg-warning/20 text-warning-foreground",
 } as const;
 
+interface DashboardData {
+  totalprojectcount: number;
+  totalemployeecount: number;
+  pendingtaskcount: number;
+  completedtaskcount: number;
+}
+
+interface TaskDetail extends Task {
+  projects: {
+    project_name: string;
+  };
+  employee: {
+    name: string;
+    avatarUrl: string;
+  };
+}
+
 export function DashboardPage() {
-  const totalProjects = mockProjects.length;
-  const totalEmployees = mockEmployees.length;
-  const pendingTasks = mockTasks.filter((t) => t.status !== "completed").length;
-  const completedTasks = mockTasks.filter((t) => t.status === "completed").length;
+  const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const [tasks, settasks] = useState<TaskDetail[]>([]);
 
-  const recentProjects = [...mockProjects]
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-    .slice(0, 5);
+  const getTaks = async () => {
+    const { data, error } = await connectSupabase
+      .from("task")
+      .select("*,projects(project_name),employee(name,avatarUrl)");
 
-  const myTasks = mockTasks
-    .filter((t) => t.assigneeId === mockCurrentUser.id || t.status !== "completed")
-    .slice(0, 4);
+    settasks(data ?? []);
+    // console.log("taskss: ", data);
+  };
+
+  const myTasks = tasks.filter((t) => t.status !== "completed").slice(0, 4);
+
+  const getEmployeName = async () => {
+    const { data, error } = await connectSupabase.from("employee").select("name");
+    if (error) {
+      console.log(error.message);
+    }
+    //  else console.log(data);
+  };
+
+  const getRecentProjects = async () => {
+    const { data, error } = await connectSupabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    const formattedProjects = data.map((item) => ({
+      id: item.id,
+      name: item.project_name,
+      description: item.description,
+      status: item.status,
+      progress: getProgressByStatus(item.status),
+      dueDate: item.end_date,
+    }));
+
+    setRecentProjects(formattedProjects);
+  };
+
+  const getProgressByStatus = (status: string): number => {
+    switch (status) {
+      case "todo":
+        return 0;
+      case "in_progress":
+        return 50;
+      case "review":
+        return 75;
+      case "completed":
+        return 100;
+      default:
+        return 0;
+    }
+  };
+  useEffect(() => {
+    getEmployeName();
+    getRecentProjects();
+    getTaks();
+  }, []);
+
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    const { count: totalProjects, error: projectError } = await connectSupabase
+      .from("projects")
+      .select("*", { count: "exact", head: true });
+
+    const { count: totalEmployees, error: employeeError } = await connectSupabase
+      .from("employee")
+      .select("*", { count: "exact", head: true });
+
+    const { count: pendingTasks, error: pendingError } = await connectSupabase
+      .from("task")
+      .select("*", { count: "exact", head: true })
+      .neq("status", "completed");
+
+    const { count: completedTasks, error: completedError } = await connectSupabase
+      .from("task")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "completed");
+
+    if (projectError) console.log(projectError.message);
+    if (employeeError) console.log(employeeError.message);
+    if (pendingError) console.log(pendingError.message);
+    if (completedError) console.log(completedError.message);
+
+    setDashboardData({
+      totalprojectcount: totalProjects || 0,
+      totalemployeecount: totalEmployees || 0,
+      pendingtaskcount: pendingTasks || 0,
+      completedtaskcount: completedTasks || 0,
+    });
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -65,7 +183,8 @@ export function DashboardPage() {
           </p>
         </div>
         <Button className="gap-1.5">
-          <Plus className="h-4 w-4" /> New project
+          <Plus className="h-4 w-4" />
+          <Link to="/projects">New project</Link>
         </Button>
       </div>
 
@@ -73,28 +192,28 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Total projects"
-          value={totalProjects}
+          value={dashboardData?.totalprojectcount ?? 0}
           delta={{ value: "+2 this month", positive: true }}
           icon={FolderKanban}
           tint="primary"
         />
         <SummaryCard
           label="Total employees"
-          value={totalEmployees}
+          value={dashboardData?.totalemployeecount ?? 0}
           delta={{ value: "+3 this quarter", positive: true }}
           icon={Users}
           tint="info"
         />
         <SummaryCard
           label="Pending tasks"
-          value={pendingTasks}
+          value={dashboardData?.pendingtaskcount ?? 0}
           delta={{ value: "-4 vs last week", positive: true }}
           icon={Clock}
           tint="warning"
         />
         <SummaryCard
           label="Completed tasks"
-          value={completedTasks}
+          value={dashboardData?.completedtaskcount ?? 0}
           delta={{ value: "+12% MoM", positive: true }}
           icon={CheckCircle2}
           tint="success"
@@ -205,44 +324,53 @@ export function DashboardPage() {
           </Button>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {myTasks.map((t) => {
-            const assignee = employeesById[t.assigneeId];
-            const project = projectsById[t.projectId];
-            return (
-              <div
-                key={t.id}
-                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-soft transition-shadow hover:shadow-elegant"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    {project?.name}
-                  </span>
-                  <PriorityPill priority={t.priority} />
-                </div>
-                <h3 className="line-clamp-2 text-sm font-semibold text-foreground">{t.title}</h3>
-                <div className="mt-auto flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={assignee?.avatarUrl} alt={assignee?.name} />
-                      <AvatarFallback className="text-[10px]">
-                        {initials(assignee?.name ?? "")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                      {assignee?.name.split(" ")[0]}
+          {myTasks.length == 0 ? (
+            <div className="h-15 text-center align-middle text-muted-foreground">no results</div>
+          ) : (
+            myTasks.map((t) => {
+              return (
+                <div
+                  key={t.id}
+                  className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-soft transition-shadow hover:shadow-elegant"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {t?.title}
                     </span>
+                    <PriorityPill priority={t.priority} />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarDays className="h-3 w-3" />
-                      {formatShortDate(t.dueDate)}
-                    </span>
-                    <TaskStatusBadge status={t.status} />
+                  <h3 className="line-clamp-2 text-sm font-semibold text-foreground">{t.title}</h3>
+                  <div className="mt-auto flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage
+                          src={
+                            connectSupabase.storage
+                              .from("Employee")
+                              .getPublicUrl(t?.employee?.avatarUrl).data.publicUrl
+                          }
+                          alt={t.employee?.name}
+                        />
+                        <AvatarFallback className="text-[10px]">
+                          {initials(t.employee?.name ?? "")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground">
+                        {t.employee?.name.split(" ")[0]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarDays className="h-3 w-3" />
+                        {formatShortDate(t.dueDate)}
+                      </span>
+                      <TaskStatusBadge status={t.status} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </section>
     </div>

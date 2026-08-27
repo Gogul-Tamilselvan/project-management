@@ -30,14 +30,23 @@ export function Modal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"}
+        className={`
+          ${size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"}
+          flex max-h-[90vh] flex-col gap-0 p-0 rounded-lg
+        `}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 px-6 py-4">
           <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <div className="py-2">{children}</div>
-        {footer && <DialogFooter className="gap-2 sm:gap-2">{footer}</DialogFooter>}
+        <div className="flex-1 overflow-y-auto px-6 py-4 
+          [&::-webkit-scrollbar]:w-1.5
+          [&::-webkit-scrollbar-track]:bg-transparent
+          [&::-webkit-scrollbar-thumb]:bg-transparent
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          hover:[&::-webkit-scrollbar-thumb]:bg-gray-300
+        ">{children}</div>
+        {footer && <DialogFooter className="shrink-0 gap-2  px-6 py-4 sm:gap-2">{footer}</DialogFooter>}
       </DialogContent>
     </Dialog>
   );

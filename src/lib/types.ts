@@ -1,4 +1,4 @@
-export type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed";
+export type ProjectStatus = "todo" | "planning" | "in_progress" | "review" | "on_hold" | "completed";
 export type TaskStatus = "todo" | "in_progress" | "review" | "completed";
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type EmployeeStatus = "active" | "away" | "offline";
@@ -37,11 +37,7 @@ export interface Task {
 }
 
 export type ActivityKind =
-  | "project_created"
-  | "task_assigned"
-  | "employee_added"
-  | "task_completed"
-  | "project_updated";
+  "project_created" | "task_assigned" | "employee_added" | "task_completed" | "project_updated";
 
 export interface Activity {
   id: string;
@@ -52,3 +48,22 @@ export interface Activity {
 }
 
 export interface CurrentUser extends Employee {}
+
+export interface UserDataType {
+  email: string;
+  name: string;
+  // sub: string;
+  // phone_verified: boolean;
+  // email_verified: boolean;
+}
+
+export interface TimeSheetType {
+  approval_status: string;
+  approved_at: string;
+  approved_by: string;
+  created_at: string;
+  id: string;
+  task_description: string;
+  task_id: string;
+  time_duration: number;
+}

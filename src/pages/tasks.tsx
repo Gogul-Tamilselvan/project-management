@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, MoreHorizontal, CalendarDays, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -28,20 +28,106 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui-kit/modal";
 import { PriorityPill, TaskStatusBadge } from "@/components/ui-kit/status-badges";
-import { mockTasks } from "@/lib/mock/tasks";
-import { mockProjects } from "@/lib/mock/projects";
-import { mockEmployees } from "@/lib/mock/employees";
-import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials } from "@/lib/format";
-import type { Priority, TaskStatus } from "@/lib/types";
+import type { Priority, Task, TaskStatus } from "@/lib/types";
+import { connectSupabase } from "@/services/config";
+import { toast } from "sonner";
+import { TableSkeleton } from "@/components/ui-kit/loading-skeleton";
+
+interface empName {
+  id: string;
+  name: string;
+  email: string;
+}
+interface proTitle {
+  id: string;
+  project_name: string;
+}
+
+interface TaskDetail extends Task {
+  projects: {
+    project_name: string;
+  };
+  employee: {
+    name: string;
+    avatarUrl: string;
+  };
+}
+const statusLabels = {
+  todo: "Todo",
+  in_progress: "In Progress",
+  review: "Review",
+  completed: "Completed",
+};
+const priorityLabels = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  urgent: "Urgent",
+};
 
 export function TasksPage() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<boolean>(false);
+  const [viewTask, setViewTask] = useState<boolean>(false);
+  const [editTask, setEditTask] = useState<boolean>(false);
+  const [taskdetail, settaskdetail] = useState<TaskDetail>();
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState<Priority | "all">("all");
   const [status, setStatus] = useState<TaskStatus | "all">("all");
+  const [project, setProject] = useState<proTitle[]>([]);
+  const [empName, setEmpName] = useState<empName[]>([]);
+  const [task, settask] = useState<TaskDetail[]>([]);
+  const [loading, setloading] = useState<boolean>(true);
 
-  const visible = mockTasks.filter(
+  const getTasks = async () => {
+    setloading(true);
+    const { data, error } = await connectSupabase
+      .from("task")
+      .select("*,projects(project_name),employee(name,avatarUrl)");
+    if (error) {
+      toast.error(error.message);
+      setloading(false);
+    } else {
+      settask(data);
+      setloading(false);
+    }
+  };
+
+  const getEmployeName = async () => {
+    const { data, error } = await connectSupabase.from("employee").select("name,id,email");
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setEmpName(data);
+    }
+    getTasks();
+  };
+
+  const getProjectTitle = async () => {
+    const { data, error } = await connectSupabase.from("projects").select("project_name,id");
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setProject(data);
+    }
+    getTasks();
+  };
+
+  const dropTask = async (id: string) => {
+    const { error } = await connectSupabase.from("task").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+    } else toast.success("Deleted successfully!");
+    getTasks();
+  };
+
+  useEffect(() => {
+    getEmployeName();
+    getProjectTitle();
+    getTasks();
+  }, [open, viewTask, editTask]);
+
+  const visible = task?.filter(
     (t) =>
       (priority === "all" || t.priority === priority) &&
       (status === "all" || t.status === status) &&
@@ -100,78 +186,131 @@ export function TasksPage() {
 
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="pl-6">Task</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Assignee</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Due date</TableHead>
-                <TableHead className="pr-6 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((t) => {
-                const assignee = employeesById[t.assigneeId];
-                const project = projectsById[t.projectId];
-                return (
-                  <TableRow key={t.id} className="border-border">
-                    <TableCell className="pl-6 py-3.5">
-                      <div className="font-medium text-foreground">{t.title}</div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {project?.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={assignee?.avatarUrl} alt={assignee?.name} />
-                          <AvatarFallback className="text-[10px]">
-                            {initials(assignee?.name ?? "")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-foreground">{assignee?.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <PriorityPill priority={t.priority} />
-                    </TableCell>
-                    <TableCell>
-                      <TaskStatusBadge status={t.status} />
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        {formatShortDate(t.dueDate)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Open</DropdownMenuItem>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+          {loading ? (
+            <TableSkeleton />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="pl-6">Task</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Assignee</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Due date</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.length == 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-15 text-center align-middle text-muted-foreground"
+                    >
+                      No results found
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                ) : (
+                  visible?.map((t, idx) => {
+                    return (
+                      <TableRow key={idx} className="border-border">
+                        <TableCell className="pl-6 py-3.5">
+                          <div className="font-medium text-foreground">{t.title}</div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {t?.projects?.project_name}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage
+                                src={
+                                  connectSupabase.storage
+                                    .from("Employee")
+                                    .getPublicUrl(t?.employee?.avatarUrl).data.publicUrl
+                                }
+                                alt={t?.employee?.name}
+                              />
+                              <AvatarFallback className="text-[10px]">
+                                {initials(t.assigneeId ?? "")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-foreground">{t.employee.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <PriorityPill priority={t.priority} />
+                        </TableCell>
+                        <TableCell>
+                          <TaskStatusBadge status={t.status} />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            {formatShortDate(t.dueDate)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="pr-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setViewTask(true);
+                                  settaskdetail(t);
+                                }}
+                              >
+                                Open
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditTask(true);
+                                  settaskdetail(t);
+                                }}
+                              >
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => dropTask(t.id)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
 
-      <CreateTaskModal open={open} onOpenChange={setOpen} />
+      <CreateTaskModal
+        open={open}
+        onOpenChange={setOpen}
+        empName={empName}
+        projectTitle={project}
+      />
+
+      {taskdetail && <ViewTask open={viewTask} onOpenChange={setViewTask} value={taskdetail} />}
+      {taskdetail && (
+        <EditTask
+          open={editTask}
+          onOpenChange={setEditTask}
+          value={taskdetail}
+          empName={empName}
+          project={project}
+        />
+      )}
     </div>
   );
 }
@@ -179,10 +318,103 @@ export function TasksPage() {
 function CreateTaskModal({
   open,
   onOpenChange,
+  empName,
+  projectTitle,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  empName: empName[];
+  projectTitle: proTitle[];
 }) {
+  const [projectDetail, setprojectDetail] = useState<Task>({
+    id: "",
+    title: "",
+    description: "",
+    projectId: "",
+    assigneeId: "",
+    priority: "low",
+    status: "in_progress",
+    dueDate: "",
+  });
+
+  const [assigneemail, setassigneemail] = useState("");
+
+  const resetForm = () => {
+    setprojectDetail({
+      id: "",
+      title: "",
+      description: "",
+      projectId: "",
+      assigneeId: "",
+      priority: "low",
+      status: "in_progress",
+      dueDate: "",
+    });
+  };
+
+  const addTask = async () => {
+    if (
+      projectDetail.title != "" &&
+      projectDetail.description != "" &&
+      projectDetail.dueDate != "" &&
+      projectDetail.assigneeId != "" &&
+      assigneemail !== ""
+    ) {
+      const { error } = await connectSupabase.from("task").insert({
+        title: projectDetail.title,
+        description: projectDetail.description,
+        projectId: projectDetail.projectId,
+        assigneeId: projectDetail.assigneeId,
+        dueDate: projectDetail.dueDate,
+        priority: projectDetail.priority,
+        status: projectDetail.status,
+      });
+
+      // if (error) {
+      //   toast.error(error.message);
+      // } else {
+      //   onOpenChange(false);
+      //   toast.success("Task created");
+      // }
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      const { error: emailError } = await connectSupabase.functions.invoke("send-task-email",
+        {
+          body: {
+            email: assigneemail,
+            taskTitle: projectDetail.title,
+            description: projectDetail.description,
+            priority: projectDetail.priority,
+            dueDate: projectDetail.dueDate,
+          },
+        });
+
+      if (emailError) {
+        console.error("Email error:", emailError);
+        toast.error("Task created, but email could not be sent.");
+        return;
+      }
+
+      onOpenChange(false);
+      toast.success("Task created and email sent successfully!");
+
+      setprojectDetail({
+        assigneeId: "",
+        dueDate: "",
+        id: "",
+        priority: "" as Priority,
+        projectId: "",
+        status: "" as TaskStatus,
+        title: "",
+        description: "",
+      });
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -191,49 +423,95 @@ function CreateTaskModal({
       description="Add a new task and assign it to a teammate."
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              resetForm();
+              onOpenChange(false);
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Create task</Button>
+          <Button type="submit" form="task-from" onClick={addTask}>
+            Create task
+          </Button>
         </>
       }
     >
       <form
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        id="task-from"
         onSubmit={(e) => e.preventDefault()}
       >
         <div className="sm:col-span-2">
-          <Label htmlFor="t-name">Task title</Label>
-          <Input id="t-name" placeholder="What needs to get done?" className="mt-1.5" />
+          <Label htmlFor="t-name">
+            Task title <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-name"
+            placeholder="What needs to get done?"
+            className="mt-1.5"
+            value={projectDetail.title}
+            required
+            onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
+          />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="t-desc">Description</Label>
-          <Textarea id="t-desc" rows={3} className="mt-1.5" />
+          <Label htmlFor="t-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
+          <Textarea
+            id="t-desc"
+            value={projectDetail.description}
+            required
+            rows={3}
+            className="mt-1.5"
+            onChange={(e) => setprojectDetail((prev) => ({ ...prev, description: e.target.value }))}
+          />
         </div>
         <div>
-          <Label>Project</Label>
-          <Select>
+          <Label>
+            Project <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            value={projectDetail.projectId}
+            required
+            onValueChange={(val) => setprojectDetail((prev) => ({ ...prev, projectId: val }))}
+          >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>
-              {mockProjects.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+              {projectTitle?.map((p, idx: number) => (
+                <SelectItem key={idx} value={p.id}>
+                  {p.project_name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label>Assignee</Label>
-          <Select>
+          <Label>
+            Assignee <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            value={projectDetail.assigneeId}
+            required
+            onValueChange={(val) => {
+              const SelectedEmployee = empName.find((employee) => employee.id === val);
+              setprojectDetail((prev) => ({ ...prev, assigneeId: val }));
+              setassigneemail(SelectedEmployee?.email ?? "")
+              console.log(" user:", SelectedEmployee?.name);
+              console.log("email:", SelectedEmployee?.email);
+            }}
+          >
             <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Select employee" />
             </SelectTrigger>
+
             <SelectContent>
-              {mockEmployees.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
+              {empName?.map((e, idx: number) => (
+                <SelectItem key={idx} value={e.id}>
                   {e.name}
                 </SelectItem>
               ))}
@@ -242,7 +520,14 @@ function CreateTaskModal({
         </div>
         <div>
           <Label>Priority</Label>
-          <Select defaultValue="medium">
+          <Select
+            required
+            value={projectDetail.priority}
+            defaultValue="low"
+            onValueChange={(val: Priority) =>
+              setprojectDetail((prev) => ({ ...prev, priority: val }))
+            }
+          >
             <SelectTrigger className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
@@ -255,8 +540,382 @@ function CreateTaskModal({
           </Select>
         </div>
         <div>
-          <Label htmlFor="t-due">Due date</Label>
-          <Input id="t-due" type="date" className="mt-1.5" />
+          <Label htmlFor="t-due">
+            Due date <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-due"
+            required
+            type="date"
+            value={projectDetail.dueDate}
+            className="mt-1.5"
+            onChange={(e) => setprojectDetail((prev) => ({ ...prev, dueDate: e.target.value }))}
+            onClick={(e) => {
+              (e.currentTarget as HTMLInputElement).showPicker?.();
+            }}
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ViewTask({
+  open,
+  onOpenChange,
+  value,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  value: TaskDetail;
+}) {
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="View task"
+      description="View task details and track its progress."
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+        </>
+      }
+    >
+      <form className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Label htmlFor="t-name">
+            Task title <span className="text-red-500">*</span>
+          </Label>
+          <Input id="t-name" className="mt-1.5" required readOnly defaultValue={value?.title} />
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="t-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
+          <Textarea
+            id="t-desc"
+            required
+            rows={3}
+            className="mt-1.5"
+            readOnly
+            defaultValue={value?.description}
+          />
+        </div>
+        <div>
+          <Label>
+            Project <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-name"
+            placeholder="What needs to get done?"
+            className="mt-1.5"
+            required
+            readOnly
+            defaultValue={value?.projects?.project_name}
+          />
+        </div>
+        <div>
+          <Label>
+            Assignee <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-name"
+            placeholder="What needs to get done?"
+            className="mt-1.5"
+            required
+            readOnly
+            defaultValue={value?.employee?.name}
+          />
+        </div>
+        <div>
+          <Label>Priority</Label>
+          <Input
+            id="t-name"
+            placeholder="What needs to get done?"
+            className="mt-1.5"
+            required
+            readOnly
+            defaultValue={priorityLabels[value?.priority as keyof typeof priorityLabels]}
+          />
+        </div>
+        <div>
+          <Label>
+            Status <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-name"
+            placeholder="What needs to get done?"
+            className="mt-1.5"
+            required
+            readOnly
+            defaultValue={statusLabels[value?.status as keyof typeof statusLabels]}
+          />
+        </div>
+        <div>
+          <Label htmlFor="t-due">
+            Due date <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-due"
+            required
+            type="date"
+            readOnly
+            className="mt-1.5"
+            defaultValue={value?.dueDate}
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function EditTask({
+  open,
+  onOpenChange,
+  value,
+  empName,
+  project,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  value: TaskDetail;
+  empName: empName[];
+  project: proTitle[];
+}) {
+  const [editTask, setEditTask] = useState<Task>({
+    id: value?.id,
+    title: value?.title,
+    description: value?.description,
+    projectId: value?.projectId,
+    assigneeId: value?.assigneeId,
+    priority: value?.priority,
+    status: value?.status,
+    dueDate: value?.dueDate,
+    // emp_image: value?.emp_image,
+  });
+  const [isEdited, setIsEdited] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setEditTask({
+        id: value.id,
+        title: value.title,
+        description: value.description,
+        projectId: value.projectId,
+        assigneeId: value.assigneeId,
+        priority: value.priority,
+        status: value.status,
+        dueDate: value.dueDate,
+      });
+      setIsEdited(false);
+    }
+  }, [open, value]);
+
+  const editTaskfun = async (id: string) => {
+    const updateData = {
+      title: editTask.title,
+      description: editTask.description ?? "",
+      projectId: editTask.projectId,
+      assigneeId: editTask.assigneeId,
+      dueDate: editTask.dueDate,
+      priority: editTask.priority,
+      status: editTask.status,
+      // emp_image: editTask.emp_image,
+      ...(editTask.status === "review" && {
+        approval_status: "pending" as const,
+      }),
+    };
+
+    const { error } = await connectSupabase.from("task").update(updateData).eq("id", id);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      onOpenChange(false);
+      toast.success(
+        editTask.status === "review" ? "Task submitted for TL approval" : "Updated task",
+      );
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit task"
+      description="Modify task details and assignments."
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={!isEdited} onClick={() => editTaskfun(value.id)}>
+            Update
+          </Button>
+        </>
+      }
+    >
+      <form
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        id="task-from"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <div className="sm:col-span-2">
+          <Label htmlFor="t-name">
+            Task title <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-name"
+            placeholder="What needs to get done?"
+            className="mt-1.5"
+            required
+
+            value={editTask.title}
+            onChange={(e) => {
+              setIsEdited(true);
+
+              setEditTask((prev) => ({
+                ...prev,
+                title: e.target.value,
+              }));
+            }}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="t-desc">
+            Description <span className="text-red-500">*</span>
+          </Label>
+          <Textarea
+            id="t-desc"
+            required
+            rows={3}
+            className="mt-1.5"
+
+            value={editTask.description}
+            onChange={(e) => {
+              setIsEdited(true);
+
+              setEditTask((prev) => ({
+                ...prev,
+                description: e.target.value,
+              }));
+            }}
+          />
+        </div>
+        <div>
+          <Label>
+            Project <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            required
+            defaultValue={value?.projectId}
+            onValueChange={(val) => {
+              setIsEdited(true);
+
+              setEditTask((prev) => ({
+                ...prev,
+                projectId: val,
+              }));
+            }}
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Select project" />
+            </SelectTrigger>
+            <SelectContent>
+              {project?.map((p, idx: number) => (
+                <SelectItem key={idx} value={p.id}>
+                  {p.project_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>
+            Assignee <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            required
+            defaultValue={value?.assigneeId}
+            onValueChange={(val) => setEditTask((prev) => ({ ...prev, assigneeId: val }))}
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Select employee" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {empName?.map((e, idx: number) => (
+                <SelectItem key={idx} value={e.id}>
+                  {e.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Priority</Label>
+          <Select
+            required
+            value={editTask.priority}
+            onValueChange={(val: Priority) => setEditTask((prev) => ({ ...prev, priority: val }))}
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>
+            Status <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            required
+            value={editTask.status}
+            onValueChange={(val: TaskStatus) => {
+              setIsEdited(true);
+              setEditTask((prev) => ({
+                ...prev,
+                status: val,
+              }));
+            }}
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todo">Todo</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="review">Review</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="t-due">
+            Due date <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="t-due"
+            required
+            type="date"
+
+            className="mt-1.5"
+            value={editTask.dueDate}
+            onChange={(e) => {
+              setIsEdited(true);
+              setEditTask((prev) => ({
+                ...prev,
+                dueDate: e.target.value,
+              }));
+            }}
+          />
         </div>
       </form>
     </Modal>
