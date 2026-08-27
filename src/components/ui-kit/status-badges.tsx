@@ -36,7 +36,8 @@ export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   return <span className={cn(base, cls)}>{label}</span>;
 }
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {
-  const { label, cls } = taskMap[status];
+ 
+  const { label, cls } = taskMap[status] || taskMap.todo;
   return <span className={cn(base, cls)}>{label}</span>;
 }
 export function PriorityPill({ priority }: { priority: Priority }) {

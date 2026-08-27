@@ -37,6 +37,7 @@ import { TableSkeleton } from "@/components/ui-kit/loading-skeleton";
 interface empName {
   id: string;
   name: string;
+  email: string;
 }
 interface proTitle {
   id: string;
@@ -93,7 +94,7 @@ export function TasksPage() {
   };
 
   const getEmployeName = async () => {
-    const { data, error } = await connectSupabase.from("employee").select("name,id");
+    const { data, error } = await connectSupabase.from("employee").select("name,id,email");
     if (error) {
       toast.error(error.message);
     } else {
@@ -336,6 +337,8 @@ function CreateTaskModal({
     dueDate: "",
   });
 
+  const [assigneemail, setassigneemail] = useState("");
+
   const resetForm = () => {
     setprojectDetail({
       id: "",
@@ -354,7 +357,8 @@ function CreateTaskModal({
       projectDetail.title != "" &&
       projectDetail.description != "" &&
       projectDetail.dueDate != "" &&
-      projectDetail.assigneeId != ""
+      projectDetail.assigneeId != "" &&
+      assigneemail !== ""
     ) {
       const { error } = await connectSupabase.from("task").insert({
         title: projectDetail.title,
@@ -366,12 +370,37 @@ function CreateTaskModal({
         status: projectDetail.status,
       });
 
+      // if (error) {
+      //   toast.error(error.message);
+      // } else {
+      //   onOpenChange(false);
+      //   toast.success("Task created");
+      // }
+
       if (error) {
         toast.error(error.message);
-      } else {
-        onOpenChange(false);
-        toast.success("Task created");
+        return;
       }
+
+      const { error: emailError } = await connectSupabase.functions.invoke("send-task-email",
+        {
+          body: {
+            email: assigneemail,
+            taskTitle: projectDetail.title,
+            description: projectDetail.description,
+            priority: projectDetail.priority,
+            dueDate: projectDetail.dueDate,
+          },
+        });
+
+      if (emailError) {
+        console.error("Email error:", emailError);
+        toast.error("Task created, but email could not be sent.");
+        return;
+      }
+
+      onOpenChange(false);
+      toast.success("Task created and email sent successfully!");
 
       setprojectDetail({
         assigneeId: "",
@@ -469,7 +498,11 @@ function CreateTaskModal({
             value={projectDetail.assigneeId}
             required
             onValueChange={(val) => {
+              const SelectedEmployee = empName.find((employee) => employee.id === val);
               setprojectDetail((prev) => ({ ...prev, assigneeId: val }));
+              setassigneemail(SelectedEmployee?.email ?? "")
+              console.log(" user:", SelectedEmployee?.name);
+              console.log("email:", SelectedEmployee?.email);
             }}
           >
             <SelectTrigger className="mt-1.5">
