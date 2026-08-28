@@ -74,7 +74,7 @@ export default function KanbanBoard() {
   const [minutes, setMinutes] = useState("");
   const [timesheets, setTimesheets] = useState<TimeSheetType[]>([]);
   const [editingTimesheet, setEditingTimesheet] = useState<TimeSheetType | null>(null);
-  console.log("task: ", timesheets);
+  // console.log("task: ", timesheets);
 
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
   const [isChanged, setIsChanged] = useState(false);

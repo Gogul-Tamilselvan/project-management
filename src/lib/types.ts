@@ -1,4 +1,5 @@
-export type ProjectStatus = "todo" | "planning" | "in_progress" | "review" | "on_hold" | "completed";
+export type ProjectStatus =
+  "todo" | "planning" | "in_progress" | "review" | "on_hold" | "completed";
 export type TaskStatus = "todo" | "in_progress" | "review" | "completed";
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type EmployeeStatus = "active" | "away" | "offline";
@@ -47,7 +48,7 @@ export interface Activity {
   timestamp: string; // ISO
 }
 
-export interface CurrentUser extends Employee {}
+// export interface CurrentUser extends Employee {}
 
 export interface UserDataType {
   email: string;
@@ -66,4 +67,19 @@ export interface TimeSheetType {
   task_description: string;
   task_id: string;
   time_duration: number;
+}
+
+export interface EmailAlertType {
+  created_date?: string;
+  team_lead_name: string;
+  task_title: string;
+  task_description: string;
+  priority: string;
+  due_date?: string;
+  team_lead_initial: string;
+  task_url?: string;
+  name: string;
+  email: string;
+  to_email: string;
+  from_email: string;
 }
