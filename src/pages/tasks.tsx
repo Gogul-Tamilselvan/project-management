@@ -102,7 +102,7 @@ export function TasksPage() {
     } else {
       setEmpName(data);
     }
-    getTasks();
+    // getTasks();
   };
 
   const getProjectTitle = async () => {
@@ -112,7 +112,7 @@ export function TasksPage() {
     } else {
       setProject(data);
     }
-    getTasks();
+    // getTasks();
   };
 
   const dropTask = async (id: string) => {
@@ -127,7 +127,7 @@ export function TasksPage() {
     getEmployeName();
     getProjectTitle();
     getTasks();
-  }, [open, viewTask, editTask]);
+  }, [editTask, open]);
 
   const visible = task?.filter(
     (t) =>
@@ -339,8 +339,6 @@ function CreateTaskModal({
     dueDate: "",
   });
 
-  // const [assigneemail, setassigneemail] = useState("");
-
   const resetForm = () => {
     setprojectDetail({
       id: "",
@@ -354,12 +352,17 @@ function CreateTaskModal({
     });
   };
 
+  useEffect(() => {
+    if (!open) {
+      resetForm();
+    }
+  }, [open]);
+
   const addTask = async () => {
     if (
-      projectDetail.title != "" &&
-      projectDetail.description != "" &&
-      projectDetail.dueDate != "" &&
-      projectDetail.assigneeId != ""
+      projectDetail.title.trim() &&
+      projectDetail.dueDate.trim() &&
+      projectDetail.assigneeId.trim()
     ) {
       const { error } = await connectSupabase.from("task").insert({
         title: projectDetail.title,
@@ -396,9 +399,10 @@ function CreateTaskModal({
         }
         onOpenChange(false);
         resetForm();
+
         toast.success("Task created");
       }
-    }
+    } else toast.info("Please fill in all required fields");
   };
 
   return (
@@ -444,12 +448,13 @@ function CreateTaskModal({
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="t-desc">
-            Description <span className="text-red-500">*</span>
+            Description
+            {/* <span className="text-red-500">*</span> */}
           </Label>
           <Textarea
             id="t-desc"
             value={projectDetail.description}
-            required
+            // required
             rows={3}
             className="mt-1.5"
             onChange={(e) => setprojectDetail((prev) => ({ ...prev, description: e.target.value }))}
@@ -574,15 +579,17 @@ function ViewTask({
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="t-desc">
-            Description <span className="text-red-500">*</span>
+            Description
+            {/* <span className="text-red-500">*</span> */}
           </Label>
           <Textarea
             id="t-desc"
-            required
+            // required
             rows={3}
             className="mt-1.5"
             readOnly
             defaultValue={value?.description}
+            placeholder="No task description provided"
           />
         </div>
         <div>
@@ -691,6 +698,17 @@ function EditTask({
         dueDate: value.dueDate,
       });
       setIsEdited(false);
+    } else {
+      setEditTask({
+        id: "",
+        title: "",
+        description: "",
+        projectId: "",
+        assigneeId: "",
+        priority: "low",
+        status: "todo",
+        dueDate: "",
+      });
     }
   }, [open, value]);
 
@@ -709,16 +727,18 @@ function EditTask({
       }),
     };
 
-    const { error } = await connectSupabase.from("task").update(updateData).eq("id", id);
+    if (updateData.title.trim() && updateData.assigneeId !== null && updateData.dueDate.trim()) {
+      const { error } = await connectSupabase.from("task").update(updateData).eq("id", id);
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      onOpenChange(false);
-      toast.success(
-        editTask.status === "review" ? "Task submitted for TL approval" : "Updated task",
-      );
-    }
+      if (error) {
+        toast.error(error.message);
+      } else {
+        onOpenChange(false);
+        toast.success(
+          editTask.status === "review" ? "Task submitted for TL approval" : "Updated task",
+        );
+      }
+    } else toast.info("Please fill in all required fields.");
   };
 
   return (
@@ -766,11 +786,12 @@ function EditTask({
         </div>
         <div className="sm:col-span-2">
           <Label htmlFor="t-desc">
-            Description <span className="text-red-500">*</span>
+            Description
+            {/* <span className="text-red-500">*</span> */}
           </Label>
           <Textarea
             id="t-desc"
-            required
+            // required
             rows={3}
             className="mt-1.5"
 

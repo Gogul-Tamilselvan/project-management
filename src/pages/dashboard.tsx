@@ -94,7 +94,8 @@ export function DashboardPage() {
   const getEmployeName = async () => {
     const { data, error } = await connectSupabase.from("employee").select("name");
     if (error) {
-      console.log(error.message);
+      // console.log(error.message);
+      return;
     }
     //  else console.log(data);
   };

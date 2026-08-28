@@ -58,7 +58,7 @@ export function EmployeesPage() {
   const deleteemploye = async (id: string) => {
     const { error } = await connectSupabase.from("employee").delete().eq("id", id);
     if (error) {
-      toast.error("delete error" + error);
+      toast.error("delete error" + error.details);
       return;
     } else toast.success("Deleted successfully.");
     getEmployes();
@@ -314,28 +314,34 @@ function EditEmployeeModal({
 
         avatarPath = filePath;
       }
+      if (
+        updatedata.name.trim() &&
+        updatedata.email.trim() &&
+        updatedata.phone.trim().length >= 10 &&
+        updatedata.role.trim()
+      ) {
+        const { error } = await connectSupabase
+          .from("employee")
+          .update({
+            name: updatedata.name,
+            email: updatedata.email,
+            phone: updatedata.phone,
+            avatarUrl: avatarPath,
+            department: updatedata.department,
+            role: updatedata.role,
+            status: updatedata.status,
+          })
+          .eq("id", updatedata.id);
 
-      const { error } = await connectSupabase
-        .from("employee")
-        .update({
-          name: updatedata.name,
-          email: updatedata.email,
-          phone: updatedata.phone,
-          avatarUrl: avatarPath,
-          department: updatedata.department,
-          role: updatedata.role,
-          status: updatedata.status,
-        })
-        .eq("id", updatedata.id);
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
 
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      toast.success("Employee Updated successfully.");
-      setupdateimage(null);
-      seteditopen(false);
+        toast.success("Employee Updated successfully.");
+        setupdateimage(null);
+        seteditopen(false);
+      } else toast.info("Please fill in all required fields");
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -518,12 +524,13 @@ function AddEmployeeModal({
 
       if (uploadError) throw uploadError;
       if (
-        formData.name &&
-        formData.email &&
-        formData.phone &&
-        formData.department &&
-        formData.role &&
-        formData.status
+        formData.name.trim() &&
+        formData.email.trim() &&
+        formData.phone.trim() &&
+        formData.department.trim() &&
+        formData.role.trim() &&
+        formData.status.trim() &&
+        formData.phone.length >= 10
       ) {
         const { error } = await connectSupabase.from("employee").insert({
           name: formData.name,

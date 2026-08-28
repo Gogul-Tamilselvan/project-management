@@ -3,6 +3,7 @@ import { connectSupabase } from "../../services/config";
 import { toast } from "sonner";
 import { Check, X, Clock, User, CalendarDays, AlertCircle, ClipboardCheck } from "lucide-react";
 import { CardsSkeleton } from "../ui-kit/loading-skeleton";
+import { SummaryCard } from "../ui-kit/summary-card";
 
 interface Employee {
   id: string;
@@ -73,7 +74,7 @@ export default function TaskApprovalPage() {
         .single();
 
       if (error || !employee) {
-        console.error("Employee role error:", error);
+        // console.error("Employee role error:", error);
 
         setIsTL(false);
         setLoading(false);
@@ -85,7 +86,7 @@ export default function TaskApprovalPage() {
       setIsTL(tl);
       setLoading(false);
     } catch (error) {
-      console.error("Unexpected role error:", error);
+      // console.error("Unexpected role error:", error);
 
       setIsTL(false);
       setLoading(false);
@@ -100,12 +101,7 @@ export default function TaskApprovalPage() {
 
       const { data, error } = await connectSupabase
         .from("task")
-        .select(
-          `
-          *,
-          employee(id, name)
-        `,
-        )
+        .select(`*,employee(id, name)`)
         .eq("status", "review")
         .eq("approval_status", "pending")
         .order("created_at", {
@@ -113,7 +109,7 @@ export default function TaskApprovalPage() {
         });
 
       if (error) {
-        console.error("Error fetching approval tasks:", error);
+        // console.error("Error fetching approval tasks:", error);
 
         toast.error("Failed to load approval tasks");
         return;
@@ -121,7 +117,7 @@ export default function TaskApprovalPage() {
 
       setTasks((data || []) as ApprovalTask[]);
     } catch (error) {
-      console.error("Unexpected error fetching tasks:", error);
+      // console.error("Unexpected error fetching tasks:", error);
 
       toast.error("Something went wrong");
     } finally {
@@ -163,7 +159,7 @@ export default function TaskApprovalPage() {
         .eq("approval_status", "pending");
 
       if (error) {
-        console.error("Approval error:", error);
+        // console.error("Approval error:", error);
 
         toast.error("Failed to approve task");
         return;
@@ -173,7 +169,7 @@ export default function TaskApprovalPage() {
 
       await fetchPendingTasks();
     } catch (error) {
-      console.error("Unexpected approval error:", error);
+      // console.error("Unexpected approval error:", error);
 
       toast.error("Something went wrong");
     } finally {
@@ -235,7 +231,7 @@ export default function TaskApprovalPage() {
         .eq("approval_status", "pending");
 
       if (error) {
-        console.error("Reject error:", error);
+        // console.error("Reject error:", error);
 
         toast.error("Failed to reject task");
         return;
@@ -249,7 +245,7 @@ export default function TaskApprovalPage() {
 
       await fetchPendingTasks();
     } catch (error) {
-      console.error("Unexpected rejection error:", error);
+      // console.error("Unexpected rejection error:", error);
 
       toast.error("Something went wrong");
     } finally {
@@ -282,7 +278,7 @@ export default function TaskApprovalPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-card p-4 md:p-6">
+      <div className="min-h-screen">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -302,7 +298,6 @@ export default function TaskApprovalPage() {
 
           <div className="flex items-center gap-2 rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3">
             <Clock className="h-5 w-5 text-yellow-600" />
-
             <div>
               <p className="text-xs font-medium text-yellow-700">Pending Approval</p>
 

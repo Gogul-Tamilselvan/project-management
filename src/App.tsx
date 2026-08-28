@@ -13,6 +13,7 @@ import { Toaster } from "sonner";
 import { connectSupabase } from "@/services/config";
 import KanbanBoard from "./components/kanban/kanban";
 import TaskApprovalPage from "./components/kanban/TaskApprovalPage";
+import { getCurrentUserRoleService } from "./services/AuthService";
 
 function NotFoundPage() {
   return (
@@ -36,6 +37,7 @@ function NotFoundPage() {
   );
 }
 
+const UserRole = await getCurrentUserRoleService();
 export function App() {
   const [logged, setLogged] = useState<boolean | null>(null);
 
@@ -83,7 +85,8 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:projectId" element={<KanbanBoard />} />
-          <Route path="projects/tasks/approvals" element={<TaskApprovalPage />} />
+          {/* <Route path="projects/tasks/approvals" element={<TaskApprovalPage />} /> */}
+          {UserRole?.role === "TL" && <Route path="taskreview" element={<TaskApprovalPage />} />}
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="profile" element={<ProfilePage />} />

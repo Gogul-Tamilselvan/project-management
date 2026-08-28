@@ -85,7 +85,7 @@ export function ProjectsPage() {
       .eq("projectId", selectedProject.id);
 
     if (taskError) {
-      console.error("Task check error:", taskError);
+      // console.error("Task check error:", taskError);
       toast.error("Unable to check project tasks");
       return;
     }
@@ -102,7 +102,7 @@ export function ProjectsPage() {
     const { error } = await connectSupabase.from("projects").delete().eq("id", selectedProject.id);
 
     if (error) {
-      console.error("Delete error:", error);
+      // console.error("Delete error:", error);
       toast.error("Failed to delete project");
       return;
     }
@@ -253,31 +253,30 @@ export function ProjectsPage() {
           setMode("create");
         }}
       />
-      {isDeleteOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-            <h2 className="text-xl font-bold">Delete Project</h2>
+      <Modal
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        title="Delete Project"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteOpen(false);
+                setSelectedProject(null);
+              }}
+            >
+              Cancel
+            </Button>
 
-            <p className="mt-3">Are you sure you want to delete this project?</p>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsDeleteOpen(false);
-                  setSelectedProject(null);
-                }}
-              >
-                Cancel
-              </Button>
-
-              <Button variant="destructive" onClick={handleDelete}>
-                Yes Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            <Button variant="destructive" onClick={handleDelete}>
+              Yes Delete
+            </Button>
+          </>
+        }
+      >
+        <p>Are you sure you want to delete this project?</p>
+      </Modal>
     </div>
   );
 }
@@ -361,41 +360,47 @@ function CreateProjectModal({
     e.preventDefault();
 
     if (mode === "view") return;
+    if (
+      formData.name.trim() &&
+      formData.startDate.trim() &&
+      formData.description.trim() &&
+      formData.startDate.trim() &&
+      formData.dueDate.trim()
+    ) {
+      if (editingProject) {
+        // UPDATE PROJECT
+        const { error } = await connectSupabase
+          .from("projects")
+          .update({
+            project_name: formData.name,
+            description: formData.description,
+            status: formData.status,
+            start_date: formData.startDate,
+            end_date: formData.dueDate,
+          })
+          .eq("id", editingProject.id);
 
-    if (editingProject) {
-      // UPDATE PROJECT
-      const { error } = await connectSupabase
-        .from("projects")
-        .update({
+        if (error) {
+          // console.error("Update Error:", error);
+          return;
+        } else toast.success("Project updated successfully");
+      } else {
+        // CREATE PROJECT
+
+        const { error } = await connectSupabase.from("projects").insert({
           project_name: formData.name,
           description: formData.description,
           status: formData.status,
           start_date: formData.startDate,
           end_date: formData.dueDate,
-        })
-        .eq("id", editingProject.id);
+        });
 
-      if (error) {
-        console.error("Update Error:", error);
-        return;
-      } else toast.success("Project updated successfully");
-    } else {
-      // CREATE PROJECT
-
-      const { error } = await connectSupabase.from("projects").insert({
-        project_name: formData.name,
-        description: formData.description,
-        status: formData.status,
-        start_date: formData.startDate,
-        end_date: formData.dueDate,
-      });
-
-      if (error) {
-        console.error("Insert Error:", error);
-        return;
-      } else toast.success("Project created successfully");
+        if (error) {
+          // console.error("Insert Error:", error);
+          return;
+        } else toast.success("Project created successfully");
+      }
     }
-
     // Refresh project list
     onCreate();
 

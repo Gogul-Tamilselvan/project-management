@@ -28,7 +28,7 @@ export function SettingsPage() {
     const { data, error } = await connectSupabase
       .from("workspace_settings")
       .select("*")
-      .eq("id", "8c91f0ad-932e-4ac5-acc8-9ba9d8e83243")
+      .eq("id", "3a7b1af7-0bdc-4870-ada8-2adbd0189277")
       .single();
 
     if (error) {
@@ -84,7 +84,7 @@ export function SettingsPage() {
         two_factor: twoFactor,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", "8c91f0ad-932e-4ac5-acc8-9ba9d8e83243");
+      .eq("id", "3a7b1af7-0bdc-4870-ada8-2adbd0189277");
 
     if (error) {
       console.error("SAVE ERROR:", error);

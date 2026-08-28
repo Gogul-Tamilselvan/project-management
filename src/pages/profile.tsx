@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { Mail, Phone, Building2, Briefcase, Pencil, KeyRound } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +17,7 @@ import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
 import { Employee } from "@/lib/types";
 import { toast } from "sonner";
-import { CardSkeleton, CardsSkeleton, RowSkeleton } from "@/components/ui-kit/loading-skeleton";
+import { CardSkeleton } from "@/components/ui-kit/loading-skeleton";
 
 export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
@@ -46,41 +53,49 @@ export function ProfilePage() {
   const updateProfile = async () => {
     if (!user) return;
 
-    const { error } = await connectSupabase
-      .from("employee")
-      .update({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        department: formData.department,
-        role: formData.role,
-      })
-      .eq("id", user.id);
+    if (
+      formData.name.trim() != "" &&
+      formData.department.trim() != "" &&
+      formData.email.trim() != "" &&
+      formData.role.trim() != "" &&
+      formData.phone.trim().length >= 10
+    ) {
+      const { error } = await connectSupabase
+        .from("employee")
+        .update({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          department: formData.department,
+          role: formData.role,
+        })
+        .eq("id", user.id);
 
-    if (error) {
-      console.error(error);
-      toast.error("Failed to update profile");
-      return;
-    }
+      if (error) {
+        // console.error(error);
+        toast.error("Failed to update profile");
+        return;
+      }
 
-    // Update local state immediately
-    setUser(formData);
+      // Update local state immediately
+      setUser(formData);
 
-    // Close the modal
-    setEditOpen(false);
-    setIsEdited(false);
-    // Optional success message
-    toast.success("Profile updated successfully");
+      // Close the modal
+      setEditOpen(false);
+      setIsEdited(false);
+      // Optional success message
+      toast.success("Profile updated successfully");
 
-    // Reload latest data from Supabase
-    fetchProfile();
+      // Reload latest data from Supabase
+      fetchProfile();
+    } else toast.info("Enter all fields");
   };
 
   const fetchStats = async (employeeId: string) => {
     const { data, error } = await connectSupabase.rpc("get_employee_stats", { emp_id: employeeId });
 
     if (error) {
-      console.error(error);
+      // console.error(error);
       return;
     }
 
@@ -173,7 +188,7 @@ export function ProfilePage() {
       .maybeSingle();
 
     if (error) {
-      console.error(error);
+      // console.error(error);
       setLoading(false);
       return;
     }
@@ -321,7 +336,9 @@ export function ProfilePage() {
           onSubmit={(e) => e.preventDefault()}
         >
           <div className="sm:col-span-2">
-            <Label htmlFor="pr-name">Full name</Label>
+            <Label htmlFor="pr-name">
+              Full name <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pr-name"
               value={formData.name}
@@ -336,7 +353,9 @@ export function ProfilePage() {
             />
           </div>
           <div>
-            <Label htmlFor="pr-email">Email</Label>
+            <Label htmlFor="pr-email">
+              Email <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pr-email"
               value={formData.email}
@@ -352,7 +371,9 @@ export function ProfilePage() {
             />
           </div>
           <div>
-            <Label htmlFor="pr-phone">Phone</Label>
+            <Label htmlFor="pr-phone">
+              Phone <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pr-phone"
               value={formData.phone}
@@ -367,22 +388,33 @@ export function ProfilePage() {
             />
           </div>
           <div>
-            <Label htmlFor="pr-dept">Department</Label>
-            <Input
-              id="pr-dept"
+            <Label htmlFor="pr-dept">
+              Department <span className="text-red-500">*</span>
+            </Label>
+            <Select
               value={formData.department}
-              onChange={(e) => {
+              required
+              onValueChange={(value) => {
                 setIsEdited(true);
-                setFormData({
-                  ...formData,
-                  department: e.target.value,
-                });
+                setFormData((prev) => ({ ...prev, department: value }));
               }}
-              className="mt-1.5"
-            />
+            >
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="engineering">Engineering</SelectItem>
+                <SelectItem value="design">Design</SelectItem>
+                <SelectItem value="product">Product</SelectItem>
+                <SelectItem value="marketing">Marketing</SelectItem>
+                <SelectItem value="sales">Sales</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <Label htmlFor="pr-role">Role</Label>
+            <Label htmlFor="pr-role">
+              Role <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pr-role"
               value={formData.role}
@@ -416,7 +448,9 @@ export function ProfilePage() {
       >
         <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
           <div>
-            <Label htmlFor="pw-current">Current password</Label>
+            <Label htmlFor="pw-current">
+              Current password <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pw-current"
               type="password"
@@ -428,11 +462,14 @@ export function ProfilePage() {
                   currentPassword: e.target.value,
                 });
               }}
+              placeholder="Enter your old password"
               className="mt-1.5"
             />
           </div>
           <div>
-            <Label htmlFor="pw-new">New password</Label>
+            <Label htmlFor="pw-new">
+              New password <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pw-new"
               type="password"
@@ -444,11 +481,14 @@ export function ProfilePage() {
                   newPassword: e.target.value,
                 });
               }}
+              placeholder="Enter your new password"
               className="mt-1.5"
             />
           </div>
           <div>
-            <Label htmlFor="pw-confirm">Confirm new password</Label>
+            <Label htmlFor="pw-confirm">
+              Confirm new password <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="pw-confirm"
               type="password"
@@ -460,6 +500,7 @@ export function ProfilePage() {
                   confirmPassword: e.target.value,
                 });
               }}
+              placeholder="Re-enter your new password"
               className="mt-1.5"
             />
           </div>

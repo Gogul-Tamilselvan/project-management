@@ -71,7 +71,7 @@ export default function KanbanBoard() {
 
   const [taskDescription, setTaskDescription] = useState("");
   const [hours, setHours] = useState("");
-  const [minutes, setMinutes] = useState("");
+  const [minutes, setMinutes] = useState("00");
   const [timesheets, setTimesheets] = useState<TimeSheetType[]>([]);
   const [editingTimesheet, setEditingTimesheet] = useState<TimeSheetType | null>(null);
   // console.log("task: ", timesheets);
@@ -111,7 +111,7 @@ export default function KanbanBoard() {
         .select("id, email, role");
 
       if (error) {
-        console.error("Role fetch error:", error);
+        // console.error("Role fetch error:", error);
         setIsTL(false);
         return;
       }
@@ -128,7 +128,7 @@ export default function KanbanBoard() {
 
       setIsTL(employee.role?.toLowerCase() === "tl");
     } catch (error) {
-      console.error("Unexpected role error:", error);
+      // console.error("Unexpected role error:", error);
       setIsTL(false);
     }
   };
@@ -150,13 +150,13 @@ export default function KanbanBoard() {
       setEmployees(Array.from(empdata.values()));
 
       if (error) {
-        console.error("Error fetching tasks:", error);
+        // console.error("Error fetching tasks:", error);
         return;
       }
 
       setTasks(data || []);
     } catch (error) {
-      console.error("Unexpected error:", error);
+      // console.error("Unexpected error:", error);
     } finally {
       setLoading(false);
     }
@@ -231,7 +231,7 @@ export default function KanbanBoard() {
         .eq("id", draggedTask.id);
 
       if (error) {
-        console.error("Error updating task status:", error);
+        // console.error("Error updating task status:", error);
         toast.error("Failed to update task");
         return;
       }
@@ -253,7 +253,7 @@ export default function KanbanBoard() {
         newStatus === "review" ? "Task submitted for TL approval" : "Task status updated",
       );
     } catch (error) {
-      console.error("Unexpected error:", error);
+      // console.error("Unexpected error:", error);
       toast.error("Something went wrong");
     } finally {
       setDraggedTask(null);
@@ -268,7 +268,7 @@ export default function KanbanBoard() {
 
     const totalMinutes = hoursPart * 60 + minutesPart;
 
-    if (taskDescription != "" && hours != "" && minutes != "") {
+    if (taskDescription.trim() && hours.trim()) {
       if (editingTimesheet) {
         // UPDATE existing entry
         const { error } = await connectSupabase
@@ -280,7 +280,7 @@ export default function KanbanBoard() {
           .eq("id", editingTimesheet.id);
 
         if (error) {
-          console.error("Update error:", error);
+          // console.error("Update error:", error);
           toast.error("Failed to update timesheet entry");
           return;
         }
@@ -296,22 +296,22 @@ export default function KanbanBoard() {
         });
 
         if (error) {
-          console.error("Insert error:", error);
+          // console.error("Insert error:", error);
           toast.error("Failed to add timesheet entry");
           return;
         }
 
         toast.success("Timesheet entry added successfully");
       }
+
+      fetchTimesheets();
+
+      setIsTimesheetOpen(false);
+      setEditingTimesheet(null);
+      setTaskDescription("");
+      setHours("");
+      setMinutes("");
     } else toast.error("Enter fields");
-
-    fetchTimesheets();
-
-    setIsTimesheetOpen(false);
-    setEditingTimesheet(null);
-    setTaskDescription("");
-    setHours("");
-    setMinutes("");
   };
 
   const handleDeleteTimesheet = async (timesheetId: string) => {
@@ -324,7 +324,7 @@ export default function KanbanBoard() {
     // console.log("Delete result:", { data, error });
 
     if (error) {
-      console.error("Delete error:", error);
+      // console.error("Delete error:", error);
       toast.error("Failed to delete timesheet entry");
       return;
     }
@@ -363,7 +363,7 @@ export default function KanbanBoard() {
       .eq("id", timesheetId);
 
     if (error) {
-      console.error("Approval error:", error);
+      // console.error("Approval error:", error);
       toast.error(`Failed to ${status} timesheet`);
       return;
     }
@@ -380,7 +380,7 @@ export default function KanbanBoard() {
           .eq("id", taskId);
 
         if (taskError) {
-          console.error("Task status update error:", taskError);
+          // console.error("Task status update error:", taskError);
           toast.error("Timesheet rejected, but failed to move task back to Review");
         }
       }
@@ -436,7 +436,7 @@ export default function KanbanBoard() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {isTL && (
+          {/* {isTL && (
             <Button
               variant={"default"}
               onClick={() => navigate("/projects/tasks/approvals")}
@@ -444,7 +444,7 @@ export default function KanbanBoard() {
             >
               Task Approvals
             </Button>
-          )}
+          )} */}
           <div className="flex items-center justify-between m-2">
             {employees.slice(0, 5).map((v) => (
               <Avatar
@@ -565,19 +565,18 @@ export default function KanbanBoard() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="text-sm font-semibold leading-5  text-foreground ">
-                          {`${task.title}`}
+                          {task.title}
                         </h3>
-
                         <button
                           type="button"
-                          className="text-lg leading-none text-slate-400 opacity-0 transition group-hover:opacity-100 hover:text-slate-700 "
+                          className="text-lg leading-none text-foreground opacity-0 transition group-hover:opacity-100 hover:text-slate-700 "
                         >
                           ⋮
                         </button>
                       </div>
                       {task.description && (
-                        <p className="mt-2 line-clamp-3 text-sm leading-5 text-slate-500">
-                          {` ${task.description}`}
+                        <p className="mt-2 line-clamp-3 text-sm leading-5 text-muted-foreground">
+                          {task.description}
                         </p>
                       )}
 
