@@ -21,8 +21,8 @@ export function SettingsPage() {
   const [twoFactor, setTwoFactor] = useState(false);
 
   const handleCancel = () => {
-  loadSettings();
-};
+    loadSettings();
+  };
 
   const loadSettings = async () => {
     const { data, error } = await connectSupabase
@@ -98,24 +98,22 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Settings
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Settings</h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
           Manage your workspace, notifications, and preferences.
         </p>
       </div>
 
-      <Section icon={User}
-        title="Account"
-        description="Update your account information."
-      >
+      <Section icon={User} title="Account" description="Update your account information.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="s-name">Workspace name</Label>
 
-            <Input id="s-name" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)}
+            <Input
+              id="s-name"
+              value={workspaceName}
+              onChange={(e) => setWorkspaceName(e.target.value)}
               className="mt-1.5"
             />
           </div>
@@ -123,43 +121,64 @@ export function SettingsPage() {
           <div>
             <Label htmlFor="s-slug">Workspace URL</Label>
 
-            <Input id="s-slug" value={workspaceUrl} onChange={(e) => setWorkspaceUrl(e.target.value)}
+            <Input
+              id="s-slug"
+              value={workspaceUrl}
+              onChange={(e) => setWorkspaceUrl(e.target.value)}
               className="mt-1.5"
             />
           </div>
         </div>
       </Section>
 
-      <Section
-        icon={Palette}
-        title="Appearance"
-        description="Customize how Plane looks for you."
-      >
-        <ToggleRow label="Compact mode" description="Reduce padding and font sizes throughout the app." checked={compactMode}
+      <Section icon={Palette} title="Appearance" description="Customize how Plane looks for you.">
+        <ToggleRow
+          label="Compact mode"
+          description="Reduce padding and font sizes throughout the app."
+          checked={compactMode}
           onChange={setCompactMode}
         />
 
-        <ToggleRow label="Reduce motion"  description="Minimize non-essential animations." checked={reduceMotion}  onChange={setReduceMotion}
+        <ToggleRow
+          label="Reduce motion"
+          description="Minimize non-essential animations."
+          checked={reduceMotion}
+          onChange={setReduceMotion}
         />
       </Section>
 
-      <Section icon={Bell} title="Notifications" description="Choose how you'd like to be notified."
+      <Section
+        icon={Bell}
+        title="Notifications"
+        description="Choose how you'd like to be notified."
       >
-        <ToggleRow label="Email notifications" description="Get an email when you're mentioned or assigned." checked={emailNotifications}
+        <ToggleRow
+          label="Email notifications"
+          description="Get an email when you're mentioned or assigned."
+          checked={emailNotifications}
           onChange={setEmailNotifications}
         />
 
-        <ToggleRow label="Push notifications" description="Real-time notifications in your browser." checked={pushNotifications}
+        <ToggleRow
+          label="Push notifications"
+          description="Real-time notifications in your browser."
+          checked={pushNotifications}
           onChange={setPushNotifications}
         />
 
-        <ToggleRow label="Weekly digest"  description="A summary of team activity every Monday."  checked={weeklyDigest} onChange={setWeeklyDigest}
+        <ToggleRow
+          label="Weekly digest"
+          description="A summary of team activity every Monday."
+          checked={weeklyDigest}
+          onChange={setWeeklyDigest}
         />
       </Section>
 
-      <Section icon={Shield} title="Security" description="Protect your account."
-      >
-        <ToggleRow label="Two-factor authentication" description="Add an extra layer of security to your account."  checked={twoFactor}
+      <Section icon={Shield} title="Security" description="Protect your account.">
+        <ToggleRow
+          label="Two-factor authentication"
+          description="Add an extra layer of security to your account."
+          checked={twoFactor}
           onChange={setTwoFactor}
         />
       </Section>
@@ -194,9 +213,7 @@ function Section({
         </div>
 
         <div>
-          <h2 className="text-base font-semibold text-foreground">
-            {title}
-          </h2>
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
 
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>

@@ -43,9 +43,7 @@ export function SummaryCard({
           <span
             className={cn(
               "mb-1 inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium",
-              delta.positive
-                ? "bg-success/15 text-success"
-                : "bg-destructive/12 text-destructive",
+              delta.positive ? "bg-success/15 text-success" : "bg-destructive/12 text-destructive",
             )}
           >
             {delta.positive ? (

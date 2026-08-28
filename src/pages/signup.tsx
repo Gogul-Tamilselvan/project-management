@@ -81,7 +81,9 @@ export function SignupPage() {
         {/* Form */}
         <form onSubmit={handlesubmit} className="space-y-4">
           <div>
-            <label htmlFor="su-name">Name <span className="text-red-500">*</span></label>
+            <label htmlFor="su-name">
+              Name <span className="text-red-500">*</span>
+            </label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
@@ -93,7 +95,9 @@ export function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="su-email">Email <span className="text-red-500">*</span></label>
+            <label htmlFor="su-email">
+              Email <span className="text-red-500">*</span>
+            </label>
             <Input
               id="su-email"
               value={formData.email}
@@ -106,7 +110,9 @@ export function SignupPage() {
           </div>
 
           <div>
-            <label htmlFor="su-password">Password <span className="text-red-500">*</span></label>
+            <label htmlFor="su-password">
+              Password <span className="text-red-500">*</span>
+            </label>
             <Input
               id="su-password"
               value={formData.password}

@@ -121,7 +121,7 @@ export default function KanbanBoard() {
       );
 
       if (!employee) {
-        console.log("No employee record found for this user");
+        // console.log("No employee record found for this user");
         setIsTL(false);
         return;
       }
@@ -248,7 +248,7 @@ export default function KanbanBoard() {
         ),
       );
 
-      console.log("Task status updated:", newStatus);
+      // console.log("Task status updated:", newStatus);
       toast.success(
         newStatus === "review" ? "Task submitted for TL approval" : "Task status updated",
       );
@@ -321,7 +321,7 @@ export default function KanbanBoard() {
       .eq("id", timesheetId)
       .select();
 
-    console.log("Delete result:", { data, error });
+    // console.log("Delete result:", { data, error });
 
     if (error) {
       console.error("Delete error:", error);

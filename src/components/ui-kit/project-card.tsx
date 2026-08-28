@@ -15,10 +15,8 @@ interface ProjectCardProps {
   onDelete?: (p: Project) => void;
 }
 
-export function ProjectCard({ project, onView, onEdit, onDelete}: ProjectCardProps) {
+export function ProjectCard({ project, onView, onEdit, onDelete }: ProjectCardProps) {
   const team = project.teamIds.map((id) => employeesById[id]).filter(Boolean);
-
- 
 
   return (
     <motion.article
@@ -51,12 +49,7 @@ export function ProjectCard({ project, onView, onEdit, onDelete}: ProjectCardPro
       </div>
 
       <div className="flex items-center gap-2 pt-1">
-        <Button
-          variant="secondary"
-          size="sm"
-          className="flex-1"
-          onClick={() => onView?.(project)}
-        >
+        <Button variant="secondary" size="sm" className="flex-1" onClick={() => onView?.(project)}>
           <Eye className="mr-1.5 h-3.5 w-3.5" /> View
         </Button>
         <Button variant="ghost" size="sm" onClick={() => onEdit?.(project)} aria-label="Edit">

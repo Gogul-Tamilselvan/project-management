@@ -56,11 +56,10 @@ export function SigninPage() {
       password: "",
     }));
     toast.success("Sign in successful.");
-    
+
     setTimeout(() => {
       navigate("/dashboard");
     }, 2500);
-
   };
 
   return (
@@ -76,7 +75,9 @@ export function SigninPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="su-email">Email <span className="text-red-500">*</span> </label>
+            <label htmlFor="su-email">
+              Email <span className="text-red-500">*</span>{" "}
+            </label>
             <Input
               id="su-email"
               value={formData.email}
@@ -89,7 +90,9 @@ export function SigninPage() {
           </div>
 
           <div>
-            <label htmlFor="su-password">Password <span className="text-red-500">*</span></label>
+            <label htmlFor="su-password">
+              Password <span className="text-red-500">*</span>
+            </label>
             <Input
               id="su-password"
               value={formData.password}

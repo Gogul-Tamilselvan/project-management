@@ -10,6 +10,7 @@ import { initials } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
 import { Employee } from "@/lib/types";
 import { toast } from "sonner";
+import { CardSkeleton, CardsSkeleton, RowSkeleton } from "@/components/ui-kit/loading-skeleton";
 
 export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
@@ -189,9 +190,9 @@ export function ProfilePage() {
     setLoading(false);
   };
 
-  if (loading) return null;
+  // if (loading) return null;
 
-  if (!user) {
+  if (!user && !loading) {
     return (
       <div className="flex min-h-[80vh] items-center justify-center px-4">
         <div className="max-w-md text-center">
@@ -222,57 +223,61 @@ export function ProfilePage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Profile card */}
         <div className="rounded-xl border border-border bg-card p-6 shadow-soft lg:col-span-2">
-          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-            <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
-              <AvatarImage
-                src={
-                  connectSupabase.storage.from("Employee").getPublicUrl(user?.avatarUrl ?? "").data
-                    .publicUrl
-                }
-                alt={user?.name ?? ""}
-              />
-              <AvatarFallback className="text-2xl">{initials(user?.name ?? "")}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
-                {user && <EmployeeStatusBadge status={user.status} />}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{user?.role}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    if (user) {
-                      setFormData(user);
-                    }
-                    setIsEdited(false);
-                    setEditOpen(true);
-                  }}
-                  className="gap-1.5"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Edit profile
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setPasswordData({
-                      currentPassword: "",
-                      newPassword: "",
-                      confirmPassword: "",
-                    });
+          {loading ? (
+            <CardSkeleton />
+          ) : (
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+              <Avatar className="h-24 w-24 ring-4 ring-primary-soft">
+                <AvatarImage
+                  src={
+                    connectSupabase.storage.from("Employee").getPublicUrl(user?.avatarUrl ?? "")
+                      .data.publicUrl
+                  }
+                  alt={user?.name ?? ""}
+                />
+                <AvatarFallback className="text-2xl">{initials(user?.name ?? "")}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
+                  {user && <EmployeeStatusBadge status={user.status} />}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{user?.role}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (user) {
+                        setFormData(user);
+                      }
+                      setIsEdited(false);
+                      setEditOpen(true);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit profile
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setPasswordData({
+                        currentPassword: "",
+                        newPassword: "",
+                        confirmPassword: "",
+                      });
 
-                    setIsPasswordEdited(false);
-                    setPwOpen(true);
-                  }}
-                  className="gap-1.5"
-                >
-                  <KeyRound className="h-3.5 w-3.5" /> Change password
-                </Button>
+                      setIsPasswordEdited(false);
+                      setPwOpen(true);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <KeyRound className="h-3.5 w-3.5" /> Change password
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-6 grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-2">
             <InfoRow icon={Mail} label="Email" value={user?.email ?? ""} />
@@ -283,11 +288,17 @@ export function ProfilePage() {
         </div>
 
         {/* Stats */}
-        <div className="space-y-4">
-          <StatBlock label="Active projects" value={activeProjects} />
-          <StatBlock label="Assigned tasks" value={assignedTasks} />
-          <StatBlock label="Tasks completed" value={completedTasks} />
-        </div>
+        {loading ? (
+          <>
+            <CardSkeleton />
+          </>
+        ) : (
+          <div className="space-y-4">
+            <StatBlock label="Active projects" value={activeProjects} />
+            <StatBlock label="Assigned tasks" value={assignedTasks} />
+            <StatBlock label="Tasks completed" value={completedTasks} />
+          </div>
+        )}
       </div>
 
       <Modal

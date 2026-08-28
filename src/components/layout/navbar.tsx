@@ -160,8 +160,8 @@ export function Navbar({ onOpenMobileNav }: NavbarProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Profile</DropdownMenuItem>
-          <DropdownMenuItem>Settings</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/profile")}>Profile</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/settings")}>Settings</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-destructive" onClick={logout}>
             Log out

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { Link } from "react-router-dom";
 import {
   FolderKanban,
@@ -32,7 +33,7 @@ import { employeesById, projectsById } from "@/lib/data";
 import { formatShortDate, initials, relativeTime } from "@/lib/format";
 import { connectSupabase } from "@/services/config";
 import { useEffect, useState } from "react";
-import { Task } from "@/lib/types";
+import { ProjectStatus, Task } from "@/lib/types";
 
 const activityIcon = {
   project_created: FolderKanban,
@@ -56,6 +57,14 @@ interface DashboardData {
   pendingtaskcount: number;
   completedtaskcount: number;
 }
+interface recentProjectsType {
+  id: string;
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  progress: number;
+  dueDate: string;
+}
 
 interface TaskDetail extends Task {
   projects: {
@@ -68,7 +77,7 @@ interface TaskDetail extends Task {
 }
 
 export function DashboardPage() {
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const [recentProjects, setRecentProjects] = useState<recentProjectsType[]>([]);
   const [tasks, settasks] = useState<TaskDetail[]>([]);
 
   const getTaks = async () => {
@@ -98,7 +107,7 @@ export function DashboardPage() {
       .limit(5);
 
     if (error) {
-      console.log(error);
+      // console.log(error);
       return;
     }
 
@@ -240,7 +249,7 @@ export function DashboardPage() {
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="pl-6">Project</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-[180px]">Progress</TableHead>
+                  <TableHead className="w-45">Progress</TableHead>
                   <TableHead className="pr-6 text-right">Due date</TableHead>
                 </TableRow>
               </TableHeader>

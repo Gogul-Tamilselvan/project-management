@@ -61,9 +61,12 @@ export function ProjectsPage() {
 
   const totalPercent = async (id: string): Promise<number> => {
     const { data } = await connectSupabase.from("task").select("status").eq("projectId", id);
-    if (data) {
-      const dt = data.map((v) => getProgressByStatus(v.status)).reduce((acc, count) => count + acc);
-      return Math.ceil(dt / 3);
+
+    if (data && data.length > 0) {
+      const dt = data
+        .map((v) => getProgressByStatus(v.status))
+        ?.reduce((acc, count) => count + acc);
+      return Math.ceil(dt / data.length);
     }
     return 0;
   };
@@ -131,7 +134,7 @@ export function ProjectsPage() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.log(error);
+      // console.log(error);
       setloading(false);
 
       return;
@@ -143,7 +146,7 @@ export function ProjectsPage() {
         name: item.project_name,
         description: item.description,
         status: item.status,
-        progress: await totalPercent(item.id),
+        progress: (await totalPercent(item.id)) ?? 90,
         startDate: item.start_date,
         dueDate: item.end_date,
         teamIds: [],

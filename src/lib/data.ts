@@ -10,7 +10,7 @@ import { mockProjects } from "./mock/projects";
 import { mockTasks } from "./mock/tasks";
 import type { Activity, CurrentUser, Employee, Project, Task } from "./types";
 
-const delay = <T,>(value: T, ms = 200): Promise<T> =>
+const delay = <T>(value: T, ms = 200): Promise<T> =>
   new Promise((resolve) => setTimeout(() => resolve(value), ms));
 
 export const getProjects = () => delay<Project[]>(mockProjects);

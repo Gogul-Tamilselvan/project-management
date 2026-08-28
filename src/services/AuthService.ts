@@ -15,12 +15,12 @@ export const getCurrentUserRoleService = async () => {
     .eq("email", user.email);
 
   if (error) {
-    console.error("Employee error:", error);
+    // console.error("Employee error:", error);
     return null;
   }
 
   if (!employee) {
-    console.log("Employee not found");
+    // console.log("Employee not found");
     return null;
   }
 
