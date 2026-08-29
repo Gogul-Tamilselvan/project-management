@@ -58,9 +58,8 @@ export function SigninPage() {
     toast.success("Sign in successful.");
 
     setTimeout(() => {
-      window.location.reload();
       navigate("/dashboard");
-    }, 500);
+    }, 1500);
   };
 
   return (

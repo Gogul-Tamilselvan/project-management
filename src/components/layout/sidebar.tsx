@@ -22,20 +22,6 @@ import { toast } from "sonner";
 import { UserDataType } from "@/lib/types";
 import { getCurrentUserRoleService } from "@/services/AuthService";
 
-const userRole = await getCurrentUserRoleService();
-
-const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/projects", label: "Projects", icon: FolderKanban },
-  { to: "/employees", label: "Employees", icon: Users },
-  { to: "/tasks", label: "Tasks", icon: CheckSquare },
-  ...(userRole?.role === "TL"
-    ? [{ to: "/taskreview", label: "Task Review", icon: UserKeyIcon }]
-    : []),
-  { to: "/profile", label: "Profile", icon: UserIcon },
-  { to: "/settings", label: "Settings", icon: Settings },
-];
-
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
@@ -50,7 +36,17 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
     email: "",
     name: "",
   });
+  const [userRole, setuserRole] = useState<string | null>(null);
 
+  const nav: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    { to: "/projects", label: "Projects", icon: FolderKanban },
+    { to: "/employees", label: "Employees", icon: Users },
+    { to: "/tasks", label: "Tasks", icon: CheckSquare },
+    ...(userRole === "TL" ? [{ to: "/taskreview", label: "Task Review", icon: UserKeyIcon }] : []),
+    { to: "/profile", label: "Profile", icon: UserIcon },
+    { to: "/settings", label: "Settings", icon: Settings },
+  ];
   const navigate = useNavigate();
 
   const getUserData = async () => {
@@ -81,6 +77,37 @@ export function Sidebar({ collapsed, onToggle, className, onNavigate }: SidebarP
       navigate("/");
     }, 500);
   };
+
+  useEffect(() => {
+    const loadUserRole = async () => {
+      const res = await getCurrentUserRoleService();
+      setuserRole(res?.role ?? null);
+    };
+
+    loadUserRole();
+
+    const {
+      data: { subscription },
+    } = connectSupabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        setuserRole(null);
+        setuserDt({
+          email: "",
+          name: "",
+        });
+        return;
+      }
+
+      const res = await getCurrentUserRoleService();
+      setuserRole(res?.role ?? null);
+
+      getUserData();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     getUserData();

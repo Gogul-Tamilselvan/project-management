@@ -37,9 +37,9 @@ function NotFoundPage() {
   );
 }
 
-const UserRole = await getCurrentUserRoleService();
 export function App() {
   const [logged, setLogged] = useState<boolean | null>(null);
+  const [userRole, setuserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -52,8 +52,10 @@ export function App() {
 
     const {
       data: { subscription },
-    } = connectSupabase.auth.onAuthStateChange((_event, session) => {
+    } = connectSupabase.auth.onAuthStateChange(async (_event, session) => {
       setLogged(!!session);
+      const res = await getCurrentUserRoleService();
+      setuserRole(res?.role ?? null);
     });
 
     return () => subscription.unsubscribe();
@@ -86,7 +88,7 @@ export function App() {
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:projectId" element={<KanbanBoard />} />
           {/* <Route path="projects/tasks/approvals" element={<TaskApprovalPage />} /> */}
-          {UserRole?.role === "TL" && <Route path="taskreview" element={<TaskApprovalPage />} />}
+          {userRole === "TL" && <Route path="taskreview" element={<TaskApprovalPage />} />}
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="profile" element={<ProfilePage />} />

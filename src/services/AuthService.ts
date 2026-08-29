@@ -12,7 +12,8 @@ export const getCurrentUserRoleService = async () => {
   const { data: employee, error } = await connectSupabase
     .from("employee")
     .select("id, email, role, name")
-    .eq("email", user.email);
+    .eq("email", user.email)
+    .maybeSingle();
 
   if (error) {
     return null;
@@ -24,9 +25,9 @@ export const getCurrentUserRoleService = async () => {
 
   return {
     email: user.email ?? "",
-    id: employee?.[0].id,
-    role: employee?.[0].role,
-    name: employee?.[0].name,
+    id: employee.id,
+    role: employee?.role ?? null,
+    name: employee?.name,
   };
 };
 
