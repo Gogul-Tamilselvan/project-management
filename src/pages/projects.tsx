@@ -354,6 +354,7 @@ function CreateProjectModal({
       ...prev,
       [e.target.name]: e.target.value,
     }));
+    e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

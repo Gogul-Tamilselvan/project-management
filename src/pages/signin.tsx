@@ -81,7 +81,12 @@ export function SigninPage() {
             <Input
               id="su-email"
               value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, email: e.target.value }));
+                e.currentTarget.setCustomValidity(
+                  e.target.value.trim() ? "" : "This field is required",
+                );
+              }}
               type="email"
               placeholder="Enter Your Email"
               required
@@ -96,7 +101,12 @@ export function SigninPage() {
             <Input
               id="su-password"
               value={formData.password}
-              onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, password: e.target.value }));
+                e.currentTarget.setCustomValidity(
+                  e.target.value.trim() ? "" : "This field is required",
+                );
+              }}
               type="password"
               placeholder="Enter Your Password"
               required

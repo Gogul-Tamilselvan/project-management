@@ -402,7 +402,7 @@ function CreateTaskModal({
 
         toast.success("Task created");
       }
-    } else toast.info("Please fill in all required fields");
+    }
   };
 
   return (
@@ -443,7 +443,12 @@ function CreateTaskModal({
             className="mt-1.5"
             value={projectDetail.title}
             required
-            onChange={(e) => setprojectDetail((prev) => ({ ...prev, title: e.target.value }))}
+
+            onChange={(e) => {
+              const value = e.target.value;
+              setprojectDetail((prev) => ({ ...prev, title: value }));
+              e.target.setCustomValidity(value.trim() ? "" : "This field is required");
+            }}
           />
         </div>
         <div className="sm:col-span-2">
@@ -738,7 +743,7 @@ function EditTask({
           editTask.status === "review" ? "Task submitted for TL approval" : "Updated task",
         );
       }
-    } else toast.info("Please fill in all required fields.");
+    }
   };
 
   return (
@@ -775,12 +780,13 @@ function EditTask({
 
             value={editTask.title}
             onChange={(e) => {
+              const value = e.target.value;
               setIsEdited(true);
-
               setEditTask((prev) => ({
                 ...prev,
-                title: e.target.value,
+                title: value,
               }));
+              e.target.setCustomValidity(value.trim() ? "" : "This field is required");
             }}
           />
         </div>

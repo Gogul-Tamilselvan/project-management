@@ -88,7 +88,12 @@ export function ProfilePage() {
 
       // Reload latest data from Supabase
       fetchProfile();
-    } else toast.info("Enter all fields");
+    }
+  };
+
+  const UpdateValidate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    updateProfile();
   };
 
   const fetchStats = async (employeeId: string) => {
@@ -325,7 +330,7 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setEditOpen(false)}>
               Cancel
             </Button>
-            <Button disabled={!isEdited} onClick={updateProfile}>
+            <Button disabled={!isEdited} type="submit" form="profile-form">
               Save changes
             </Button>
           </>
@@ -333,7 +338,8 @@ export function ProfilePage() {
       >
         <form
           className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-          onSubmit={(e) => e.preventDefault()}
+          id="profile-form"
+          onSubmit={UpdateValidate}
         >
           <div className="sm:col-span-2">
             <Label htmlFor="pr-name">
@@ -342,12 +348,15 @@ export function ProfilePage() {
             <Input
               id="pr-name"
               value={formData.name}
+              required
               onChange={(e) => {
+                const value = e.target.value;
                 setIsEdited(true);
-                setFormData({
-                  ...formData,
-                  name: e.target.value,
-                });
+                setFormData((prev) => ({
+                  ...prev,
+                  name: value,
+                }));
+                e.currentTarget.setCustomValidity(value.trim() ? "" : "This field is required");
               }}
               className="mt-1.5"
             />
@@ -359,6 +368,7 @@ export function ProfilePage() {
             <Input
               id="pr-email"
               value={formData.email}
+              required
               onChange={(e) => {
                 setIsEdited(true);
 
@@ -366,6 +376,7 @@ export function ProfilePage() {
                   ...formData,
                   email: e.target.value,
                 });
+                e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
               }}
               className="mt-1.5"
             />
@@ -377,13 +388,22 @@ export function ProfilePage() {
             <Input
               id="pr-phone"
               value={formData.phone}
+              min={10}
+              required
               onChange={(e) => {
+                const value = e.target.value;
                 setIsEdited(true);
                 setFormData({
                   ...formData,
-                  phone: e.target.value,
+                  phone: value,
                 });
+                e.target.setCustomValidity(
+                  value.length === 10 || (value.startsWith("+91") && value.length === 13)
+                    ? ""
+                    : "Phone number must be 10 digits",
+                );
               }}
+
               className="mt-1.5"
             />
           </div>
@@ -418,12 +438,14 @@ export function ProfilePage() {
             <Input
               id="pr-role"
               value={formData.role}
+              required
               onChange={(e) => {
                 setIsEdited(true);
                 setFormData({
                   ...formData,
                   role: e.target.value,
                 });
+                e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
               }}
               className="mt-1.5"
             />
@@ -455,12 +477,14 @@ export function ProfilePage() {
               id="pw-current"
               type="password"
               value={passwordData.currentPassword}
+              required
               onChange={(e) => {
                 setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   currentPassword: e.target.value,
                 });
+                e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
               }}
               placeholder="Enter your old password"
               className="mt-1.5"
@@ -473,6 +497,7 @@ export function ProfilePage() {
             <Input
               id="pw-new"
               type="password"
+              required
               value={passwordData.newPassword}
               onChange={(e) => {
                 setIsPasswordEdited(true);
@@ -480,6 +505,7 @@ export function ProfilePage() {
                   ...passwordData,
                   newPassword: e.target.value,
                 });
+                e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
               }}
               placeholder="Enter your new password"
               className="mt-1.5"
@@ -492,6 +518,7 @@ export function ProfilePage() {
             <Input
               id="pw-confirm"
               type="password"
+              required
               value={passwordData.confirmPassword}
               onChange={(e) => {
                 setIsPasswordEdited(true);
@@ -499,6 +526,7 @@ export function ProfilePage() {
                   ...passwordData,
                   confirmPassword: e.target.value,
                 });
+                e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
               }}
               placeholder="Re-enter your new password"
               className="mt-1.5"

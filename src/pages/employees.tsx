@@ -341,7 +341,7 @@ function EditEmployeeModal({
         toast.success("Employee Updated successfully.");
         setupdateimage(null);
         seteditopen(false);
-      } else toast.info("Please fill in all required fields");
+      }
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -398,7 +398,12 @@ function EditEmployeeModal({
             className="mt-1.5"
             value={updatedata.name}
             required
-            onChange={(e) => setupdatedata((prev) => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => {
+              setupdatedata((prev) => ({ ...prev, name: e.target.value }));
+              e.currentTarget.setCustomValidity(
+                e.target.value.trim() ? "" : "This field is required",
+              );
+            }}
           />
         </div>
         <div>
@@ -412,7 +417,12 @@ function EditEmployeeModal({
             className="mt-1.5"
             value={updatedata.email}
             required
-            onChange={(e) => setupdatedata((prev) => ({ ...prev, email: e.target.value }))}
+            onChange={(e) => {
+              setupdatedata((prev) => ({ ...prev, email: e.target.value }));
+              e.currentTarget.setCustomValidity(
+                e.target.value.trim() ? "" : "This field is required",
+              );
+            }}
           />
         </div>
         <div>
@@ -425,7 +435,15 @@ function EditEmployeeModal({
             value={updatedata.phone}
             className="mt-1.5"
             required
-            onChange={(e) => setupdatedata((prev) => ({ ...prev, phone: e.target.value }))}
+            onChange={(e) => {
+              setupdatedata((prev) => ({ ...prev, phone: e.target.value }));
+              e.currentTarget.setCustomValidity(
+                e.target.value.length === 10 ||
+                  (e.target.value.startsWith("+91") && e.target.value.length === 13)
+                  ? ""
+                  : "Phone number must be 10 digits",
+              );
+            }}
           />
         </div>
         <div>
@@ -612,12 +630,15 @@ function AddEmployeeModal({
             className="mt-1.5"
             required
             value={formData.name}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 name: e.target.value,
-              }))
-            }
+              }));
+              e.currentTarget.setCustomValidity(
+                e.target.value.trim() ? "" : "This field is required",
+              );
+            }}
           />
         </div>
         <div>
@@ -631,12 +652,15 @@ function AddEmployeeModal({
             className="mt-1.5"
             required
             value={formData.email}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 email: e.target.value,
-              }))
-            }
+              }));
+              e.currentTarget.setCustomValidity(
+                e.target.value.trim() ? "" : "This field is required",
+              );
+            }}
           />
         </div>
         <div>
@@ -649,12 +673,18 @@ function AddEmployeeModal({
             className="mt-1.5"
             required
             value={formData.phone}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 phone: e.target.value,
-              }))
-            }
+              }));
+              e.target.setCustomValidity(
+                e.target.value.length === 10 ||
+                  (e.target.value.startsWith("+91") && e.target.value.length === 13)
+                  ? ""
+                  : "Phone number must be 10 digits",
+              );
+            }}
           />
         </div>
         <div>
@@ -693,12 +723,15 @@ function AddEmployeeModal({
             className="mt-1.5"
             required
             value={formData.role}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 role: e.target.value,
-              }))
-            }
+              }));
+              e.currentTarget.setCustomValidity(
+                e.target.value.trim() ? "" : "This field is required",
+              );
+            }}
           />
         </div>
         <div>
