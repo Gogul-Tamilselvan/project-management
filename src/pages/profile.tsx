@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { Mail, Phone, Building2, Briefcase, Pencil, KeyRound } from "lucide-react";
+import { Mail, Phone, Building2, Briefcase, Pencil, KeyRound, Upload } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,26 +112,6 @@ export function ProfilePage() {
   };
 
   const changePassword = async () => {
-    if (!passwordData.currentPassword) {
-      toast.error("Enter current password");
-      return;
-    }
-
-    if (!passwordData.newPassword) {
-      toast.error("Enter new password");
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
     const {
       data: { user },
     } = await connectSupabase.auth.getUser();
@@ -163,8 +143,6 @@ export function ProfilePage() {
     }
 
     toast.success("Password updated successfully");
-    setIsPasswordEdited(false);
-
     setPasswordData({
       currentPassword: "",
       newPassword: "",
@@ -173,7 +151,6 @@ export function ProfilePage() {
 
     setPwOpen(false);
   };
-  const [isPasswordEdited, setIsPasswordEdited] = useState(false);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -286,8 +263,6 @@ export function ProfilePage() {
                         newPassword: "",
                         confirmPassword: "",
                       });
-
-                      setIsPasswordEdited(false);
                       setPwOpen(true);
                     }}
                     className="gap-1.5"
@@ -462,13 +437,21 @@ export function ProfilePage() {
             <Button variant="ghost" onClick={() => setPwOpen(false)}>
               Cancel
             </Button>
-            <Button disabled={!isPasswordEdited} onClick={changePassword}>
+            <Button
+              disabled={
+                passwordData.newPassword == "" ||
+                passwordData.confirmPassword !== passwordData.newPassword ||
+                passwordData.currentPassword == ""
+              }
+              form="change-pass"
+              onClick={changePassword}
+            >
               Update password
             </Button>
           </>
         }
       >
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-4" onSubmit={(e) => e.preventDefault()} id="change-pass">
           <div>
             <Label htmlFor="pw-current">
               Current password <span className="text-red-500">*</span>
@@ -479,7 +462,6 @@ export function ProfilePage() {
               value={passwordData.currentPassword}
               required
               onChange={(e) => {
-                setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   currentPassword: e.target.value,
@@ -500,7 +482,6 @@ export function ProfilePage() {
               required
               value={passwordData.newPassword}
               onChange={(e) => {
-                setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   newPassword: e.target.value,
@@ -521,7 +502,6 @@ export function ProfilePage() {
               required
               value={passwordData.confirmPassword}
               onChange={(e) => {
-                setIsPasswordEdited(true);
                 setPasswordData({
                   ...passwordData,
                   confirmPassword: e.target.value,
