@@ -18,6 +18,7 @@ import { connectSupabase } from "@/services/config";
 import { Employee } from "@/lib/types";
 import { toast } from "sonner";
 import { CardSkeleton } from "@/components/ui-kit/loading-skeleton";
+import { Value } from "@radix-ui/react-select";
 
 export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
@@ -50,45 +51,91 @@ export function ProfilePage() {
     fetchProfile();
   }, []);
 
+  const [updateimage, setupdateimage] = useState<File | null>(null);
+
+  const profileimgchange = JSON.stringify(formData) || updateimage !== null;
+
   const updateProfile = async () => {
     if (!user) return;
 
-    if (
-      formData.name.trim() != "" &&
-      formData.department.trim() != "" &&
-      formData.email.trim() != "" &&
-      formData.role.trim() != "" &&
-      formData.phone.trim().length >= 10
-    ) {
-      const { error } = await connectSupabase
-        .from("employee")
-        .update({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          department: formData.department,
-          role: formData.role,
-        })
-        .eq("id", user.id);
+    let imagepath = formData.avatarUrl;
 
-      if (error) {
-        // console.error(error);
-        toast.error("Failed to update profile");
+    // Upload new image if selected
+    if (updateimage) {
+      // Delete old image
+      if (formData.avatarUrl) {
+        const { error: delerror } = await connectSupabase.storage
+          .from("Employee")
+          .remove([formData.avatarUrl]);
+
+        if (delerror) {
+          console.error("Delete image error:", delerror.message);
+        }
+      }
+
+      // Create new file path
+      const filename = `${Date.now()}-${updateimage.name}`;
+      const filepath = `Emp_image/${filename}`;
+
+      // Upload image
+      const { error: uploadError } = await connectSupabase.storage
+        .from("Employee")
+        .upload(filepath, updateimage);
+
+      if (uploadError) {
+        toast.error(uploadError.message);
         return;
       }
 
-      // Update local state immediately
-      setUser(formData);
-
-      // Close the modal
-      setEditOpen(false);
-      setIsEdited(false);
-      // Optional success message
-      toast.success("Profile updated successfully");
-
-      // Reload latest data from Supabase
-      fetchProfile();
+      // Use new image path
+      imagepath = filepath;
     }
+
+    // Validation
+    if (
+      formData.name.trim() === "" ||
+      formData.department.trim() === "" ||
+      formData.email.trim() === "" ||
+      formData.role.trim() === "" ||
+      formData.phone.trim().length < 10
+    ) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    // Update employee
+    const { error } = await connectSupabase
+      .from("employee")
+      .update({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        department: formData.department,
+        role: formData.role,
+        avatarUrl: imagepath, 
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      console.error("Update profile error:", error);
+      toast.error(error.message);
+      return;
+    }
+
+    // Update local state
+    setUser({
+      ...formData,
+      avatarUrl: imagepath,
+    });
+
+    setEditOpen(false);
+    setIsEdited(false);
+    setupdateimage(null);
+
+    toast.success("Profile updated successfully");
+
+    // Reload latest data
+    fetchProfile();
   };
 
   const UpdateValidate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -316,6 +363,30 @@ export function ProfilePage() {
           id="profile-form"
           onSubmit={UpdateValidate}
         >
+          <div className="sm:col-span-2 flex items-center gap-4">
+            <div className="grid h-16 w-16 place-items-center rounded-full border border-dashed border-border bg-muted text-muted-foreground">
+              <Upload className="h-5 w-5" />
+            </div>
+            <div>
+              <Input
+                id="e-pic"
+                type="file"
+                accept="image/*"
+                required
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setIsEdited(true);
+                  setupdateimage(file);
+                  e.target.setCustomValidity(
+                    file ? "" : "This field is required"
+                  );
+                }}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                PNG or JPG up to 2MB. <span className="text-red-500">*</span>
+              </p>
+            </div>
+          </div>
           <div className="sm:col-span-2">
             <Label htmlFor="pr-name">
               Full name <span className="text-red-500">*</span>
