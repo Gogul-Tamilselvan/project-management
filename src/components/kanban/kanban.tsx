@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { connectSupabase } from "../../services/config";
 import { useParams } from "react-router-dom";
-import { CalendarDays, Pencil, Timer, Trash2, X } from "lucide-react";
+import { CalendarDays, Pencil, Timer, Trash2, X, MessageSquare,UserPlus, Check,Users , Search ,User } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus, TimeSheetType } from "@/lib/types";
@@ -31,9 +31,20 @@ interface KanbanTask {
   rejection_reason?: string | null;
 }
 
+interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  user_name?: string;
+}
+
 interface Employee {
   id: string;
   name: string;
+  email?: string;
   avatarUrl?: string;
 }
 
@@ -64,9 +75,24 @@ export default function KanbanBoard() {
 
   const [tasks, setTasks] = useState<KanbanTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [collaborators, setCollaborators] = useState<Record<string, Employee[]>>({});
+  const [isCollaboratorOpen, setIsCollaboratorOpen] = useState(false);
+  const [selectedCollaborators, setSelectedCollaborators] = useState<string[]>([]);
+  const [collaboratorTask, setCollaboratorTask] = useState<KanbanTask | null>(null);
+  const [collaboratorLoading, setCollaboratorLoading] = useState(false);
+  const [collaboratorSearch, setCollaboratorSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isTimesheetOpen, setIsTimesheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+  const [commentUpdating, setCommentUpdating] = useState(false);
+
   const [selectedEmp, setselectedEmp] = useState<string>("");
 
   const [taskDescription, setTaskDescription] = useState("");
@@ -89,11 +115,14 @@ export default function KanbanBoard() {
       fetchTasks();
       // fetchEmployees();
       fetchTimesheets();
+      fetchCollaborators();
       checkUserRole();
     } else {
       setLoading(false);
     }
   }, [projectId]);
+
+  
 
   const checkUserRole = async () => {
     try {
@@ -162,6 +191,135 @@ export default function KanbanBoard() {
     }
   };
 
+  const fetchCollaborators = async () => {
+  try {
+    const { data, error } = await connectSupabase
+      .from("task_collaborators")
+      .select(`
+        id,
+        task_id,
+        employee_id,
+        employee:employee_id (
+          id,
+          name,
+          email,
+          avatarUrl
+        )
+      `);
+
+    if (error) {
+      console.error("Error fetching collaborators:", error);
+      toast.error(error.message);
+      return;
+    }
+
+    const grouped: Record<string, Employee[]> = {};
+
+    (data || []).forEach((item: any) => {
+      if (!item.employee) return;
+
+      if (!grouped[item.task_id]) {
+        grouped[item.task_id] = [];
+      }
+
+      grouped[item.task_id].push(item.employee);
+    });
+
+    setCollaborators(grouped);
+
+    console.log("Collaborators:", grouped);
+  } catch (error) {
+    console.error("Unexpected collaborator error:", error);
+  }
+};
+
+const handleOpenCollaborators = (task: KanbanTask) => {
+  const existingCollaborators = collaborators[task.id] || [];
+
+  setCollaboratorTask(task);
+
+  setSelectedCollaborators(
+    existingCollaborators.map((employee) => employee.id)
+  );
+
+  setCollaboratorSearch("");
+
+  setIsCollaboratorOpen(true);
+};
+
+
+const handleSaveCollaborators = async () => {
+  if (!collaboratorTask) return;
+
+  if (!isTL) {
+    toast.error("Only TL can manage collaborators");
+    return;
+  }
+
+  try {
+    setCollaboratorLoading(true);
+
+    const { data: userData, error: userError } =
+      await connectSupabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      toast.error("User not authenticated");
+      return;
+    }
+
+    const taskId = collaboratorTask.id;
+
+    // Remove existing collaborators
+    const { error: deleteError } = await connectSupabase
+      .from("task_collaborators")
+      .delete()
+      .eq("task_id", taskId);
+
+    if (deleteError) {
+      console.error("Delete collaborators error:", deleteError);
+      toast.error(deleteError.message);
+      return;
+    }
+
+    // Add selected collaborators
+    if (selectedCollaborators.length > 0) {
+      const rows = selectedCollaborators.map((employeeId) => ({
+        task_id: taskId,
+        employee_id: employeeId,
+        added_by: userData.user.id,
+      }));
+
+      const { error: insertError } = await connectSupabase
+        .from("task_collaborators")
+        .insert(rows);
+
+      if (insertError) {
+        console.error("Insert collaborators error:", insertError);
+        toast.error(insertError.message);
+        return;
+      }
+    }
+
+    toast.success("Collaborators updated");
+
+    await fetchCollaborators();
+
+    setIsCollaboratorOpen(false);
+    setCollaboratorTask(null);
+    setSelectedCollaborators([]);
+  } catch (error) {
+    console.error("Unexpected collaborator error:", error);
+    toast.error("Failed to update collaborators");
+  } finally {
+    setCollaboratorLoading(false);
+  }
+};
+
+const handleCancelEditComment = () => {
+  setEditingCommentId(null);
+  setEditingCommentText("");
+};
+
   const fetchTimesheets = async () => {
     const { data, error } = await connectSupabase
       .from("timesheets")
@@ -174,6 +332,214 @@ export default function KanbanBoard() {
       setTimesheets(data);
     }
   };
+
+  const handleDeleteComment = async (commentId: string) => {
+  if (!isTL) {
+    toast.error("Only TL can delete comments");
+    return;
+  }
+
+  try {
+    setCommentUpdating(true);
+
+    const { error } = await connectSupabase
+      .from("task_comments")
+      .delete()
+      .eq("id", commentId);
+
+    if (error) {
+      console.error("Error deleting comment:", error);
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Comment deleted");
+
+    // If the deleted comment was being edited
+    if (editingCommentId === commentId) {
+      setEditingCommentId(null);
+      setEditingCommentText("");
+    }
+
+    // Refresh comments
+    if (selectedTask) {
+      await fetchComments(selectedTask.id);
+    }
+  } catch (error) {
+    console.error("Unexpected error deleting comment:", error);
+    toast.error("Failed to delete comment");
+  } finally {
+    setCommentUpdating(false);
+  }
+};
+
+const fetchComments = async (taskId: string) => {
+  try {
+    setCommentsLoading(true);
+
+    // Get comments
+    const { data, error } = await connectSupabase
+      .from("task_comments")
+      .select("*")
+      .eq("task_id", taskId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching comments:", error);
+      toast.error(error.message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      setComments([]);
+      return;
+    }
+
+    // Get currently logged-in user
+    const {
+      data: { user },
+    } = await connectSupabase.auth.getUser();
+
+    if (!user?.email) {
+      setComments(data);
+      return;
+    }
+
+    // Find employee using email
+    const { data: employeeData, error: employeeError } =
+      await connectSupabase
+        .from("employee")
+        .select("id, name, email")
+        .eq("email", user.email)
+        .single();
+
+    if (employeeError) {
+      console.error("Employee fetch error:", employeeError);
+      setComments(data);
+      return;
+    }
+
+    // Add the employee name to comments
+    const commentsWithNames = data.map((comment) => ({
+      ...comment,
+      user_name: employeeData?.name || "TL",
+    }));
+
+    console.log("Employee:", employeeData);
+    console.log("Comments with names:", commentsWithNames);
+
+    setComments(commentsWithNames);
+  } catch (error) {
+    console.error("Unexpected comment error:", error);
+    toast.error("Something went wrong");
+  } finally {
+    setCommentsLoading(false);
+  }
+};
+
+const handleAddComment = async () => {
+  if (!selectedTask?.id) {
+    return;
+  }
+
+  if (!commentText.trim()) {
+    toast.error("Please enter a comment");
+    return;
+  }
+
+  if (!isTL) {
+    toast.error("Only TL can add comments");
+    return;
+  }
+
+  try {
+    const {
+      data: { user },
+    } = await connectSupabase.auth.getUser();
+
+    if (!user) {
+      toast.error("User not found");
+      return;
+    }
+
+    const { error } = await connectSupabase
+      .from("task_comments")
+      .insert({
+        task_id: selectedTask.id,
+        user_id: user.id,
+        comment: commentText.trim(),
+      });
+
+    if (error) {
+      console.error("Add comment error:", error);
+      toast.error("Failed to add comment");
+      return;
+    }
+
+    toast.success("Comment added");
+
+    setCommentText("");
+
+    await fetchComments(selectedTask.id);
+  } catch (error) {
+    console.error("Unexpected comment error:", error);
+    toast.error("Something went wrong");
+  }
+};
+
+const handleEditComment = async (commentId: string) => {
+  if (!editingCommentText.trim()) {
+    toast.error("Comment cannot be empty");
+    return;
+  }
+
+  if (!isTL) {
+    toast.error("Only TL can edit comments");
+    return;
+  }
+
+  try {
+    setCommentUpdating(true);
+
+    const { error } = await connectSupabase
+      .from("task_comments")
+      .update({
+        comment: editingCommentText.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", commentId);
+
+    if (error) {
+      console.error("Error updating comment:", error);
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Comment updated");
+
+    // Exit edit mode
+    setEditingCommentId(null);
+    setEditingCommentText("");
+
+    // Refresh comments
+    if (selectedTask) {
+      await fetchComments(selectedTask.id);
+    }
+  } catch (error) {
+    console.error("Unexpected error updating comment:", error);
+    toast.error("Failed to update comment");
+  } finally {
+    setCommentUpdating(false);
+  }
+};
+
+const handleOpenComments = async (task: KanbanTask) => {
+  setSelectedTask(task);
+  setCommentText("");
+  setIsCommentsOpen(true);
+
+  await fetchComments(task.id);
+};
 
   const handleDragStart = (task: KanbanTask) => {
     setDraggedTask(task);
@@ -652,7 +1018,107 @@ export default function KanbanBoard() {
                         )}
                       </div>
 
-                      <div className="mt-4">
+                      {/* Collaborators */}
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between">
+                          {(collaborators[task.id] || []).length > 0 || isTL  ? (
+                            <div className="flex items-center gap-1.5">
+                              <Users className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-[11px] font-medium text-muted-foreground">
+                                Collaborators
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <Users className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-[11px] font-medium text-muted-foreground">
+                                No Collaborators
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Comments */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenComments(task)}
+                            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            <span>Comments</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center flex-wrap gap-1.5">
+                          {(collaborators[task.id] || []).length === 0 ? (
+                            isTL && (
+                              <span className="text-[11px] text-muted-foreground mt-2.5">
+                                No collaborators
+                              </span>
+                            )
+                          ) : (
+                            <>
+                              {(collaborators[task.id] || []).slice(0, 1).map((employee) => (
+                                <button
+                                  key={employee.id}
+                                  type="button"
+                                  onClick={() => handleOpenCollaborators(task)}
+                                  className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 hover:bg-muted/80 transition mt-3"
+                                >
+                                  <Avatar className="h-4 w-4">
+                                    <AvatarImage
+                                      src={
+                                        employee.avatarUrl
+                                          ? connectSupabase.storage
+                                              .from("Employee")
+                                              .getPublicUrl(employee.avatarUrl).data.publicUrl
+                                          : undefined
+                                      }
+                                      alt={employee.name}
+                                    />
+
+                                    <AvatarFallback className="text-[8px]">
+                                      {employee.name
+                                        ?.split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .slice(0, 1)
+                                        .toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+
+                                  <span className="max-w-[80px] truncate text-xs font-medium">
+                                    {employee.name}
+                                  </span>
+                                </button>
+                              ))}
+
+                              {(collaborators[task.id] || []).length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCollaborators(task)}
+                                  className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium hover:bg-muted/80 transition mt-3"
+                                >
+                                  +{(collaborators[task.id] || []).length - 1}
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {/* TL can add collaborators */}
+                          {isTL && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCollaborators(task)}
+                              className="ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/50 text-muted-foreground hover:bg-muted transition mt-3"
+                              title="Add collaborator"
+                            >
+                              <UserPlus className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 ">
                         <Button
                           //  variant={"secondary"}
                           className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -1080,6 +1546,7 @@ export default function KanbanBoard() {
           </form>
         </Modal>
       )}
+    
       {/* <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
             <div className="w-[550px] rounded-xl bg-card p-6 shadow-xl">
               <div className="mb-6 flex items-center justify-between">
@@ -1180,6 +1647,498 @@ export default function KanbanBoard() {
               </div>
             </div>
           </div> */}
+
+      {isCommentsOpen && (
+        <Modal
+        open={isCommentsOpen}
+        onOpenChange={(open) => {
+          setIsCommentsOpen(open);
+
+          if (!open) {
+            setEditingCommentId(null);
+            setEditingCommentText("");
+          }
+        }}
+        title="Comments"
+      >
+        <div className="space-y-4">
+
+          {/* Task title */}
+          {selectedTask && (
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                {selectedTask.title}
+              </h3>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                Task comments
+              </p>
+            </div>
+          )}
+
+          {/* Comments */}
+          <div className="max-h-80 space-y-3 overflow-y-auto">
+            {commentsLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Loading comments...
+              </div>
+            ) : comments.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No comments yet.
+              </div>
+            ) : (
+              comments.map((comment) => {
+        const isEditing = editingCommentId === comment.id;
+
+        return (
+          <div
+            key={comment.id}
+            className="rounded-xl border border-border bg-background p-3"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-foreground">
+                {comment.user_name || "TL"}
+              </p>
+
+              <div className="flex items-center gap-2">
+                {/* Edit button */}
+                {isTL && !isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCommentId(comment.id);
+                      setEditingCommentText(comment.comment);
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    title="Edit comment"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
+                {/* Delete button */}
+                {isTL && !isEditing && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleDeleteComment(comment.id)
+                    }
+                    disabled={commentUpdating}
+                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                    title="Delete comment"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+
+                {/* Date */}
+                <p className="text-xs text-muted-foreground">
+                  {new Date(comment.created_at).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {!isEditing && (
+              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                {comment.comment}
+              </p>
+            )}
+
+            {/* Edit mode */}
+            {isEditing && (
+              <div className="mt-3 space-y-3">
+                <Textarea
+                  value={editingCommentText}
+                  onChange={(e) =>
+                    setEditingCommentText(e.target.value)
+                  }
+                  placeholder="Edit your comment..."
+                  rows={3}
+                  autoFocus
+                />
+
+                <div className="flex justify-end gap-2">
+                  {/* Cancel */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelEditComment}
+                    disabled={commentUpdating}
+                  >
+                    Cancel
+                  </Button>
+
+                  {/* Save */}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() =>
+                      handleEditComment(comment.id)
+                    }
+                    disabled={
+                      commentUpdating ||
+                      !editingCommentText.trim()
+                    }
+                  >
+                    {commentUpdating ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })
+            )}
+          </div>
+
+          {/* Add new comment */}
+          {isTL ? (
+            <div className="space-y-3 border-t pt-4">
+              <Textarea
+                value={commentText}
+                onChange={(e) =>
+                  setCommentText(e.target.value)
+                }
+                placeholder="Write a comment..."
+                rows={3}
+              />
+
+            <div className="mt-3 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCommentText("");
+                  setIsCommentsOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleAddComment}
+                disabled={!commentText.trim()}
+              >
+                Add Comment
+              </Button>
+            </div>
+            </div>
+          ) : (
+            <div className="border-t pt-4 text-center text-xs text-muted-foreground">
+              Comments are added by the TL.
+            </div>
+          )}
+
+        </div>
+      </Modal>
+      )}
+
+      <Modal
+        open={isCollaboratorOpen}
+        onOpenChange={(open) => {
+          setIsCollaboratorOpen(open);
+
+          if (!open) {
+            setCollaboratorSearch("");
+          }
+        }}
+        title={isTL ? "Manage Collaborators" : "Collaborators"}
+      >
+        <div className="space-y-5">
+
+          {/* Task Information */}
+          {collaboratorTask && (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-sm font-semibold text-foreground">
+                {collaboratorTask.title}
+              </p>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isTL
+                ? "Select employees who will collaborate on this task."
+                : "Employees collaborating on this task."}
+            </p>
+            </div>
+          )}
+
+          {/* Search */}
+          {isTL && (
+            <div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                <Input
+                  placeholder="Search employee..."
+                  value={collaboratorSearch}
+                  onChange={(e) =>
+                    setCollaboratorSearch(e.target.value)
+                  }
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Selected Collaborators */}
+          {selectedCollaborators.length > 0 && (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium">
+                  Current Collaborators
+                </p>
+
+                {isTL && (
+                  <span className="text-xs text-muted-foreground">
+                    {selectedCollaborators.length} selected
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {selectedCollaborators.map((employeeId) => {
+                  const employee = employees.find(
+                    (emp) => emp.id === employeeId
+                  );
+
+                  if (!employee) return null;
+
+                  return (
+                    <div
+                      key={employee.id}
+                      className="flex items-center gap-3 rounded-lg border bg-background p-3"
+                    >
+                      <Avatar className="h-9 w-9 shrink-0">
+                        <AvatarImage
+                          src={
+                            employee.avatarUrl
+                              ? connectSupabase.storage
+                                  .from("Employee")
+                                  .getPublicUrl(employee.avatarUrl)
+                                  .data.publicUrl
+                              : undefined
+                          }
+                          alt={employee.name}
+                        />
+
+                        <AvatarFallback>
+                          {employee.name
+                            ?.split(" ")
+                            .map((name) => name[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {employee.name}
+                        </p>
+
+                        {employee.email && (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {employee.email}
+                          </p>
+                        )}
+                      </div>
+
+                      {isTL && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCollaborators((prev) =>
+                              prev.filter((id) => id !== employee.id)
+                            );
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Available Employees */}
+          {isTL && (
+            <div>
+              <p className="mb-2 text-sm font-medium">
+                Add Collaborators
+              </p>
+
+              <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-1">
+                {employees
+                  .filter((employee) => {
+                    if (employee.id === collaboratorTask?.assigneeId) {
+                      return false;
+                    }
+                    const search = collaboratorSearch
+                      .toLowerCase()
+                      .trim();
+
+                    if (!search) return true;
+
+                    return (
+                      employee.name
+                        ?.toLowerCase()
+                        .includes(search) ||
+                      employee.email
+                        ?.toLowerCase()
+                        .includes(search)
+                    );
+                  })
+                  .length === 0 ? (
+                    <div className="py-8 text-center">
+                      <User className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+
+                      <p className="text-sm font-medium">
+                        No employees found
+                      </p>
+
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Try a different search.
+                      </p>
+                    </div>
+                  ) : (
+                    employees
+                      .filter((employee) => {
+                        if (employee.id === collaboratorTask?.assigneeId) {
+                          return false;
+                        }
+                        const search = collaboratorSearch
+                          .toLowerCase()
+                          .trim();
+
+                        if (!search) return true;
+
+                        return (
+                          employee.name
+                            ?.toLowerCase()
+                            .includes(search) ||
+                          employee.email
+                            ?.toLowerCase()
+                            .includes(search)
+                        );
+                      })
+                      .map((employee) => {
+                        const isSelected =
+                          selectedCollaborators.includes(employee.id);
+
+                        return (
+                          <button
+                            key={employee.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCollaborators((prev) =>
+                                isSelected
+                                  ? prev.filter(
+                                      (id) => id !== employee.id
+                                    )
+                                  : [...prev, employee.id]
+                              );
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-md p-2.5 text-left transition ${
+                              isSelected
+                                ? "bg-primary/5"
+                                : "hover:bg-muted"
+                            }`}
+                          >
+
+                            <Avatar className="h-9 w-9 shrink-0">
+                              <AvatarImage
+                                src={
+                                  employee.avatarUrl
+                                    ? connectSupabase.storage
+                                        .from("Employee")
+                                        .getPublicUrl(
+                                          employee.avatarUrl
+                                        ).data.publicUrl
+                                    : undefined
+                                }
+                                alt={employee.name}
+                              />
+
+                              <AvatarFallback>
+                                {employee.name
+                                  ?.split(" ")
+                                  .map((name) => name[0])
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            {/* Employee information */}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">
+                                {employee.name}
+                              </p>
+
+                              {employee.email && (
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {employee.email}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Checkbox */}
+                            <div
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                                isSelected
+                                  ? "border-primary bg-primary text-primary-foreground"
+                                  : "border-muted-foreground/40"
+                              }`}
+                            >
+                              {isSelected && (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                  )}
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          {isTL ? (
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCollaboratorOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveCollaborators}
+                disabled={collaboratorLoading}
+              >
+                {collaboratorLoading ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCollaboratorOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+
+        </div>
+      </Modal>
 
       {rejectionModalTask && (
         <div
