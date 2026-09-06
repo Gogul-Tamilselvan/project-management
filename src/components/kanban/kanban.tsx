@@ -113,7 +113,7 @@ export default function KanbanBoard() {
   useEffect(() => {
     if (projectId) {
       fetchTasks();
-      // fetchEmployees();
+      fetchEmployees();
       fetchTimesheets();
       fetchCollaborators();
       checkUserRole();
@@ -162,6 +162,19 @@ export default function KanbanBoard() {
     }
   };
 
+  const fetchEmployees = async () => {
+    const { data, error } = await connectSupabase
+      .from("employee")
+      .select("id, name, email, avatarUrl");
+
+    if (error) {
+      console.error("Error fetching employees:", error);
+      return;
+    }
+
+    setEmployees(data || []);
+  };
+
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -171,12 +184,7 @@ export default function KanbanBoard() {
         .select("*,employee(id,name,avatarUrl)")
         .eq("projectId", projectId);
 
-      const empdata = new Map<string, Employee>();
-      data?.forEach((v) => empdata.set(v.employee.id, v.employee));
-
       // console.log("uni: ", Array.from(empdata.values()));
-
-      setEmployees(Array.from(empdata.values()));
 
       if (error) {
         // console.error("Error fetching tasks:", error);
@@ -1697,9 +1705,12 @@ const handleOpenComments = async (task: KanbanTask) => {
           >
             {/* Header */}
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-foreground">
-                {comment.user_name || "TL"}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-sm font-semibold text-foreground">
+                  {comment.user_name || "TL"}
+                </p>
+              </div>
 
               <div className="flex items-center gap-2">
                 {/* Edit button */}
