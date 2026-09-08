@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { connectSupabase } from "../../services/config";
 import { useParams } from "react-router-dom";
-import { CalendarDays, Pencil, Timer, Trash2, X, MessageSquare,UserPlus, Check,Users , Search ,User } from "lucide-react";
+import { CalendarDays, Pencil, Timer, Trash2, X, MessageSquare, UserPlus, Check, Users, Search, User, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus, TimeSheetType } from "@/lib/types";
@@ -29,6 +29,8 @@ interface KanbanTask {
   approved_by?: string | null;
   approved_at?: string | null;
   rejection_reason?: string | null;
+  assigneeName?: string;
+  subtask_id?: string;
 }
 
 interface TaskComment {
@@ -52,23 +54,23 @@ const columns: {
   id: TaskStatus;
   title: string;
 }[] = [
-  {
-    id: "todo",
-    title: "To Do",
-  },
-  {
-    id: "in_progress",
-    title: "In Progress",
-  },
-  {
-    id: "review",
-    title: "Review",
-  },
-  {
-    id: "completed",
-    title: "Completed",
-  },
-];
+    {
+      id: "todo",
+      title: "To Do",
+    },
+    {
+      id: "in_progress",
+      title: "In Progress",
+    },
+    {
+      id: "review",
+      title: "Review",
+    },
+    {
+      id: "completed",
+      title: "Completed",
+    },
+  ];
 
 export default function KanbanBoard() {
   const navigate = useNavigate();
@@ -93,6 +95,22 @@ export default function KanbanBoard() {
   const [editingCommentText, setEditingCommentText] = useState("");
   const [commentUpdating, setCommentUpdating] = useState(false);
 
+  // subtask
+
+  const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState<boolean>(false);
+  const [selectedsubTask, setSelectedsubTask] = useState<KanbanTask | null>(null);
+
+  const [subtaskForm, setSubtaskForm] = useState<KanbanTask>({
+    title: "",
+    description: "",
+    priority: "medium",
+    assigneeName: "",
+    dueDate: "",
+    subtask_id: "",
+  });
+
+  const [subtasks, setsubtask] = useState<any[]>([])
+
   const [selectedEmp, setselectedEmp] = useState<string>("");
 
   const [taskDescription, setTaskDescription] = useState("");
@@ -100,7 +118,7 @@ export default function KanbanBoard() {
   const [minutes, setMinutes] = useState("00");
   const [timesheets, setTimesheets] = useState<TimeSheetType[]>([]);
   const [editingTimesheet, setEditingTimesheet] = useState<TimeSheetType | null>(null);
-  // console.log("task: ", timesheets);
+
 
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
   const [isChanged, setIsChanged] = useState(false);
@@ -110,9 +128,25 @@ export default function KanbanBoard() {
   }>();
   const [rejectionModalTask, setRejectionModalTask] = useState<KanbanTask | null>(null);
 
+
+  const fetchsubtasks = async () => {
+    const { data, error } = await connectSupabase
+      .from("subtask")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching subtasks:", error);
+      return;
+    }
+
+    setsubtask(data || []);
+  };
+
   useEffect(() => {
     if (projectId) {
       fetchTasks();
+      fetchsubtasks();
       fetchEmployees();
       fetchTimesheets();
       fetchCollaborators();
@@ -122,7 +156,7 @@ export default function KanbanBoard() {
     }
   }, [projectId]);
 
-  
+
 
   const checkUserRole = async () => {
     try {
@@ -200,10 +234,10 @@ export default function KanbanBoard() {
   };
 
   const fetchCollaborators = async () => {
-  try {
-    const { data, error } = await connectSupabase
-      .from("task_collaborators")
-      .select(`
+    try {
+      const { data, error } = await connectSupabase
+        .from("task_collaborators")
+        .select(`
         id,
         task_id,
         employee_id,
@@ -215,118 +249,119 @@ export default function KanbanBoard() {
         )
       `);
 
-    if (error) {
-      console.error("Error fetching collaborators:", error);
-      toast.error(error.message);
-      return;
-    }
-
-    const grouped: Record<string, Employee[]> = {};
-
-    (data || []).forEach((item: any) => {
-      if (!item.employee) return;
-
-      if (!grouped[item.task_id]) {
-        grouped[item.task_id] = [];
-      }
-
-      grouped[item.task_id].push(item.employee);
-    });
-
-    setCollaborators(grouped);
-
-    console.log("Collaborators:", grouped);
-  } catch (error) {
-    console.error("Unexpected collaborator error:", error);
-  }
-};
-
-const handleOpenCollaborators = (task: KanbanTask) => {
-  const existingCollaborators = collaborators[task.id] || [];
-
-  setCollaboratorTask(task);
-
-  setSelectedCollaborators(
-    existingCollaborators.map((employee) => employee.id)
-  );
-
-  setCollaboratorSearch("");
-
-  setIsCollaboratorOpen(true);
-};
-
-
-const handleSaveCollaborators = async () => {
-  if (!collaboratorTask) return;
-
-  if (!isTL) {
-    toast.error("Only TL can manage collaborators");
-    return;
-  }
-
-  try {
-    setCollaboratorLoading(true);
-
-    const { data: userData, error: userError } =
-      await connectSupabase.auth.getUser();
-
-    if (userError || !userData.user) {
-      toast.error("User not authenticated");
-      return;
-    }
-
-    const taskId = collaboratorTask.id;
-
-    // Remove existing collaborators
-    const { error: deleteError } = await connectSupabase
-      .from("task_collaborators")
-      .delete()
-      .eq("task_id", taskId);
-
-    if (deleteError) {
-      console.error("Delete collaborators error:", deleteError);
-      toast.error(deleteError.message);
-      return;
-    }
-
-    // Add selected collaborators
-    if (selectedCollaborators.length > 0) {
-      const rows = selectedCollaborators.map((employeeId) => ({
-        task_id: taskId,
-        employee_id: employeeId,
-        added_by: userData.user.id,
-      }));
-
-      const { error: insertError } = await connectSupabase
-        .from("task_collaborators")
-        .insert(rows);
-
-      if (insertError) {
-        console.error("Insert collaborators error:", insertError);
-        toast.error(insertError.message);
+      if (error) {
+        console.error("Error fetching collaborators:", error);
+        toast.error(error.message);
         return;
       }
+
+      const grouped: Record<string, Employee[]> = {};
+
+      (data || []).forEach((item: any) => {
+        if (!item.employee) return;
+
+        if (!grouped[item.task_id]) {
+          grouped[item.task_id] = [];
+        }
+
+        grouped[item.task_id].push(item.employee);
+      });
+
+      setCollaborators(grouped);
+
+      console.log("Collaborators:", grouped);
+    } catch (error) {
+      console.error("Unexpected collaborator error:", error);
+    }
+  };
+
+  const handleOpenCollaborators = (task: KanbanTask) => {
+    const existingCollaborators = collaborators[task.id] || [];
+
+    setCollaboratorTask(task);
+
+    setSelectedCollaborators(
+      existingCollaborators.map((employee) => employee.id)
+    );
+
+    setCollaboratorSearch("");
+
+    setIsCollaboratorOpen(true);
+  };
+
+
+  const handleSaveCollaborators = async () => {
+    if (!collaboratorTask) return;
+
+    if (!isTL) {
+      toast.error("Only TL can manage collaborators");
+      return;
     }
 
-    toast.success("Collaborators updated");
+    try {
+      setCollaboratorLoading(true);
 
-    await fetchCollaborators();
+      const { data: userData, error: userError } =
+        await connectSupabase.auth.getUser();
 
-    setIsCollaboratorOpen(false);
-    setCollaboratorTask(null);
-    setSelectedCollaborators([]);
-  } catch (error) {
-    console.error("Unexpected collaborator error:", error);
-    toast.error("Failed to update collaborators");
-  } finally {
-    setCollaboratorLoading(false);
-  }
-};
+      if (userError || !userData.user) {
+        toast.error("User not authenticated");
+        return;
+      }
 
-const handleCancelEditComment = () => {
-  setEditingCommentId(null);
-  setEditingCommentText("");
-};
+      const taskId = collaboratorTask.id;
+
+      // Remove existing collaborators
+      const { error: deleteError } = await connectSupabase
+        .from("task_collaborators")
+        .delete()
+        .eq("task_id", taskId);
+
+      if (deleteError) {
+        console.error("Delete collaborators error:", deleteError);
+        toast.error(deleteError.message);
+        return;
+      }
+
+      // Add selected collaborators
+      if (selectedCollaborators.length > 0) {
+        const rows = selectedCollaborators.map((employeeId) => ({
+          task_id: taskId,
+          employee_id: employeeId,
+          added_by: userData.user.id,
+        }));
+
+        const { error: insertError } = await connectSupabase
+          .from("task_collaborators")
+          .insert(rows);
+
+        if (insertError) {
+          console.error("Insert collaborators error:", insertError);
+          toast.error(insertError.message);
+          return;
+        }
+      }
+
+      toast.success("Collaborators updated");
+
+      await fetchCollaborators();
+
+      setIsCollaboratorOpen(false);
+      setCollaboratorTask(null);
+      setSelectedCollaborators([]);
+    } catch (error) {
+      console.error("Unexpected collaborator error:", error);
+      toast.error("Failed to update collaborators");
+    } finally {
+      setCollaboratorLoading(false);
+    }
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentText("");
+  };
+
 
   const fetchTimesheets = async () => {
     const { data, error } = await connectSupabase
@@ -342,212 +377,212 @@ const handleCancelEditComment = () => {
   };
 
   const handleDeleteComment = async (commentId: string) => {
-  if (!isTL) {
-    toast.error("Only TL can delete comments");
-    return;
-  }
-
-  try {
-    setCommentUpdating(true);
-
-    const { error } = await connectSupabase
-      .from("task_comments")
-      .delete()
-      .eq("id", commentId);
-
-    if (error) {
-      console.error("Error deleting comment:", error);
-      toast.error(error.message);
+    if (!isTL) {
+      toast.error("Only TL can delete comments");
       return;
     }
 
-    toast.success("Comment deleted");
+    try {
+      setCommentUpdating(true);
 
-    // If the deleted comment was being edited
-    if (editingCommentId === commentId) {
+      const { error } = await connectSupabase
+        .from("task_comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (error) {
+        console.error("Error deleting comment:", error);
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success("Comment deleted");
+
+      // If the deleted comment was being edited
+      if (editingCommentId === commentId) {
+        setEditingCommentId(null);
+        setEditingCommentText("");
+      }
+
+      // Refresh comments
+      if (selectedTask) {
+        await fetchComments(selectedTask.id);
+      }
+    } catch (error) {
+      console.error("Unexpected error deleting comment:", error);
+      toast.error("Failed to delete comment");
+    } finally {
+      setCommentUpdating(false);
+    }
+  };
+
+  const fetchComments = async (taskId: string) => {
+    try {
+      setCommentsLoading(true);
+
+      // Get comments
+      const { data, error } = await connectSupabase
+        .from("task_comments")
+        .select("*")
+        .eq("task_id", taskId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching comments:", error);
+        toast.error(error.message);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        setComments([]);
+        return;
+      }
+
+      // Get currently logged-in user
+      const {
+        data: { user },
+      } = await connectSupabase.auth.getUser();
+
+      if (!user?.email) {
+        setComments(data);
+        return;
+      }
+
+      // Find employee using email
+      const { data: employeeData, error: employeeError } =
+        await connectSupabase
+          .from("employee")
+          .select("id, name, email")
+          .eq("email", user.email)
+          .single();
+
+      if (employeeError) {
+        console.error("Employee fetch error:", employeeError);
+        setComments(data);
+        return;
+      }
+
+      // Add the employee name to comments
+      const commentsWithNames = data.map((comment) => ({
+        ...comment,
+        user_name: employeeData?.name || "TL",
+      }));
+
+      console.log("Employee:", employeeData);
+      console.log("Comments with names:", commentsWithNames);
+
+      setComments(commentsWithNames);
+    } catch (error) {
+      console.error("Unexpected comment error:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!selectedTask?.id) {
+      return;
+    }
+
+    if (!commentText.trim()) {
+      toast.error("Please enter a comment");
+      return;
+    }
+
+    if (!isTL) {
+      toast.error("Only TL can add comments");
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await connectSupabase.auth.getUser();
+
+      if (!user) {
+        toast.error("User not found");
+        return;
+      }
+
+      const { error } = await connectSupabase
+        .from("task_comments")
+        .insert({
+          task_id: selectedTask.id,
+          user_id: user.id,
+          comment: commentText.trim(),
+        });
+
+      if (error) {
+        console.error("Add comment error:", error);
+        toast.error("Failed to add comment");
+        return;
+      }
+
+      toast.success("Comment added");
+
+      setCommentText("");
+
+      await fetchComments(selectedTask.id);
+    } catch (error) {
+      console.error("Unexpected comment error:", error);
+      toast.error("Something went wrong");
+    }
+  };
+
+  const handleEditComment = async (commentId: string) => {
+    if (!editingCommentText.trim()) {
+      toast.error("Comment cannot be empty");
+      return;
+    }
+
+    if (!isTL) {
+      toast.error("Only TL can edit comments");
+      return;
+    }
+
+    try {
+      setCommentUpdating(true);
+
+      const { error } = await connectSupabase
+        .from("task_comments")
+        .update({
+          comment: editingCommentText.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", commentId);
+
+      if (error) {
+        console.error("Error updating comment:", error);
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success("Comment updated");
+
+      // Exit edit mode
       setEditingCommentId(null);
       setEditingCommentText("");
+
+      // Refresh comments
+      if (selectedTask) {
+        await fetchComments(selectedTask.id);
+      }
+    } catch (error) {
+      console.error("Unexpected error updating comment:", error);
+      toast.error("Failed to update comment");
+    } finally {
+      setCommentUpdating(false);
     }
+  };
 
-    // Refresh comments
-    if (selectedTask) {
-      await fetchComments(selectedTask.id);
-    }
-  } catch (error) {
-    console.error("Unexpected error deleting comment:", error);
-    toast.error("Failed to delete comment");
-  } finally {
-    setCommentUpdating(false);
-  }
-};
-
-const fetchComments = async (taskId: string) => {
-  try {
-    setCommentsLoading(true);
-
-    // Get comments
-    const { data, error } = await connectSupabase
-      .from("task_comments")
-      .select("*")
-      .eq("task_id", taskId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching comments:", error);
-      toast.error(error.message);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      setComments([]);
-      return;
-    }
-
-    // Get currently logged-in user
-    const {
-      data: { user },
-    } = await connectSupabase.auth.getUser();
-
-    if (!user?.email) {
-      setComments(data);
-      return;
-    }
-
-    // Find employee using email
-    const { data: employeeData, error: employeeError } =
-      await connectSupabase
-        .from("employee")
-        .select("id, name, email")
-        .eq("email", user.email)
-        .single();
-
-    if (employeeError) {
-      console.error("Employee fetch error:", employeeError);
-      setComments(data);
-      return;
-    }
-
-    // Add the employee name to comments
-    const commentsWithNames = data.map((comment) => ({
-      ...comment,
-      user_name: employeeData?.name || "TL",
-    }));
-
-    console.log("Employee:", employeeData);
-    console.log("Comments with names:", commentsWithNames);
-
-    setComments(commentsWithNames);
-  } catch (error) {
-    console.error("Unexpected comment error:", error);
-    toast.error("Something went wrong");
-  } finally {
-    setCommentsLoading(false);
-  }
-};
-
-const handleAddComment = async () => {
-  if (!selectedTask?.id) {
-    return;
-  }
-
-  if (!commentText.trim()) {
-    toast.error("Please enter a comment");
-    return;
-  }
-
-  if (!isTL) {
-    toast.error("Only TL can add comments");
-    return;
-  }
-
-  try {
-    const {
-      data: { user },
-    } = await connectSupabase.auth.getUser();
-
-    if (!user) {
-      toast.error("User not found");
-      return;
-    }
-
-    const { error } = await connectSupabase
-      .from("task_comments")
-      .insert({
-        task_id: selectedTask.id,
-        user_id: user.id,
-        comment: commentText.trim(),
-      });
-
-    if (error) {
-      console.error("Add comment error:", error);
-      toast.error("Failed to add comment");
-      return;
-    }
-
-    toast.success("Comment added");
-
+  const handleOpenComments = async (task: KanbanTask) => {
+    setSelectedTask(task);
     setCommentText("");
+    setIsCommentsOpen(true);
 
-    await fetchComments(selectedTask.id);
-  } catch (error) {
-    console.error("Unexpected comment error:", error);
-    toast.error("Something went wrong");
-  }
-};
-
-const handleEditComment = async (commentId: string) => {
-  if (!editingCommentText.trim()) {
-    toast.error("Comment cannot be empty");
-    return;
-  }
-
-  if (!isTL) {
-    toast.error("Only TL can edit comments");
-    return;
-  }
-
-  try {
-    setCommentUpdating(true);
-
-    const { error } = await connectSupabase
-      .from("task_comments")
-      .update({
-        comment: editingCommentText.trim(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", commentId);
-
-    if (error) {
-      console.error("Error updating comment:", error);
-      toast.error(error.message);
-      return;
-    }
-
-    toast.success("Comment updated");
-
-    // Exit edit mode
-    setEditingCommentId(null);
-    setEditingCommentText("");
-
-    // Refresh comments
-    if (selectedTask) {
-      await fetchComments(selectedTask.id);
-    }
-  } catch (error) {
-    console.error("Unexpected error updating comment:", error);
-    toast.error("Failed to update comment");
-  } finally {
-    setCommentUpdating(false);
-  }
-};
-
-const handleOpenComments = async (task: KanbanTask) => {
-  setSelectedTask(task);
-  setCommentText("");
-  setIsCommentsOpen(true);
-
-  await fetchComments(task.id);
-};
+    await fetchComments(task.id);
+  };
 
   const handleDragStart = (task: KanbanTask) => {
     setDraggedTask(task);
@@ -614,10 +649,10 @@ const handleOpenComments = async (task: KanbanTask) => {
         previousTasks.map((task) =>
           task.id === draggedTask.id
             ? {
-                ...task,
-                status: newStatus,
-                approval_status: newStatus === "review" ? "pending" : task.approval_status,
-              }
+              ...task,
+              status: newStatus,
+              approval_status: newStatus === "review" ? "pending" : task.approval_status,
+            }
             : task,
         ),
       );
@@ -800,6 +835,52 @@ const handleOpenComments = async (task: KanbanTask) => {
     );
   }
 
+
+
+  const addsubtask = async () => {
+    if (!selectedsubTask?.id) {
+      toast.error("Main task not selected");
+      return;
+    }
+
+    const { data, error } = await connectSupabase
+      .from("subtask")
+      .insert([
+        {
+          title: subtaskForm.title.trim(),
+          description: subtaskForm.description.trim(),
+          priority: subtaskForm.priority,
+          assigneeName: subtaskForm.assigneeName,
+          dueDate: subtaskForm.dueDate || null,
+          subtask_id: selectedsubTask?.id,
+        },
+      ]);
+
+    console.log("Subtask data:", data);
+    console.log("Subtask error:", error);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success("Subtask created successfully");
+
+    await fetchsubtasks();
+
+    setSubtaskForm({
+      title: "",
+      description: "",
+      priority: "medium",
+      assigneeName: "",
+      dueDate: "",
+    });
+
+    setIsSubtaskModalOpen(false);
+    setSelectedsubTask(null);
+  };
+
+
   return (
     <div className="min-h-screen">
       <div className="flex items-center justify-between flex-wrap">
@@ -810,15 +891,7 @@ const handleOpenComments = async (task: KanbanTask) => {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {/* {isTL && (
-            <Button
-              variant={"default"}
-              onClick={() => navigate("/projects/tasks/approvals")}
-              // className="h-9 gap-2 rounded-lg border px-3.5 text-sm font-medium text-muted-foreground shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow"
-            >
-              Task Approvals
-            </Button>
-          )} */}
+
           <div className="flex items-center justify-between m-2">
             {employees.slice(0, 5).map((v) => (
               <Avatar
@@ -959,46 +1032,45 @@ const handleOpenComments = async (task: KanbanTask) => {
                         (task.status === "review" && task.approval_status === "pending") ||
                         (task.status === "completed" && task.approval_status === "approved") ||
                         (task.approval_status === "rejected" && task.rejection_reason)) && (
-                        <div className="mt-4 mb-4 flex items-center gap-1.5">
-                          {task.priority && (
-                            <span
-                              className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                                task.priority.toLowerCase() === "high"
+                          <div className="mt-4 mb-4 flex items-center gap-1.5">
+                            {task.priority && (
+                              <span
+                                className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${task.priority.toLowerCase() === "high"
                                   ? "bg-red-100 text-red-700"
                                   : task.priority.toLowerCase() === "medium"
                                     ? "bg-yellow-100 text-yellow-700"
                                     : "bg-green-100 text-green-700"
-                              }`}
-                            >
-                              {task.priority}
-                            </span>
-                          )}
+                                  }`}
+                              >
+                                {task.priority}
+                              </span>
+                            )}
 
-                          {task.status === "review" && task.approval_status === "pending" && (
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-600/20">
-                              <Clock size={11} strokeWidth={2.5} />
-                              Pending
-                            </span>
-                          )}
+                            {task.status === "review" && task.approval_status === "pending" && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-600/20">
+                                <Clock size={11} strokeWidth={2.5} />
+                                Pending
+                              </span>
+                            )}
 
-                          {task.status === "completed" && task.approval_status === "approved" && (
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-600/20">
-                              ✓ Approved
-                            </span>
-                          )}
+                            {task.status === "completed" && task.approval_status === "approved" && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-600/20">
+                                ✓ Approved
+                              </span>
+                            )}
 
-                          {task.approval_status === "rejected" && task.rejection_reason && (
-                            <button
-                              type="button"
-                              onClick={() => setRejectionModalTask(task)}
-                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/20 hover:bg-red-100 "
-                            >
-                              <XCircle size={11} strokeWidth={2.5} />
-                              Rejected
-                            </button>
-                          )}
-                        </div>
-                      )}
+                            {task.approval_status === "rejected" && task.rejection_reason && (
+                              <button
+                                type="button"
+                                onClick={() => setRejectionModalTask(task)}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/20 hover:bg-red-100 "
+                              >
+                                <XCircle size={11} strokeWidth={2.5} />
+                                Rejected
+                              </button>
+                            )}
+                          </div>
+                        )}
                       {/* <div className="my-4 border-t border-border" /> */}
 
                       <div className="flex items-center justify-between">
@@ -1029,7 +1101,7 @@ const handleOpenComments = async (task: KanbanTask) => {
                       {/* Collaborators */}
                       <div className="mt-3">
                         <div className="flex items-center justify-between">
-                          {(collaborators[task.id] || []).length > 0 || isTL  ? (
+                          {(collaborators[task.id] || []).length > 0 || isTL ? (
                             <div className="flex items-center gap-1.5">
                               <Users className="h-3 w-3 text-muted-foreground" />
                               <span className="text-[11px] font-medium text-muted-foreground">
@@ -1077,8 +1149,8 @@ const handleOpenComments = async (task: KanbanTask) => {
                                       src={
                                         employee.avatarUrl
                                           ? connectSupabase.storage
-                                              .from("Employee")
-                                              .getPublicUrl(employee.avatarUrl).data.publicUrl
+                                            .from("Employee")
+                                            .getPublicUrl(employee.avatarUrl).data.publicUrl
                                           : undefined
                                       }
                                       alt={employee.name}
@@ -1144,9 +1216,206 @@ const handleOpenComments = async (task: KanbanTask) => {
                         </Button>
                       </div>
                     </div>
+
                   ))
                 )}
+
+                {columnTasks.map((task) => (
+                  <div key={task.id}>
+
+                    <div className="mt-3 space-y-2">
+                      {subtasks
+                        .filter(
+                          (subtask) =>
+                            String(subtask.subtask_id).trim() ===
+                            String(task.id).trim()
+                        )
+                        .map((subtask) => (
+                          <div
+                            key={subtask.id}
+                            className="rounded-md border border-border bg-muted/30 p-3"
+                          >
+                            <p className="text-sm font-semibold text-foreground">
+                              {subtask.title}
+                            </p>
+
+                            {subtask.description && (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {subtask.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedsubTask(task);
+                          setIsSubtaskModalOpen(true);
+                        }}
+                        className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border py-2 text-sm"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Subtask
+                      </button>
+                    </div>
+
+                  </div>
+                ))}
+                {isSubtaskModalOpen && selectedsubTask && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-lg rounded-xl border border-border bg-background shadow-xl">
+
+                      <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                        <div>
+                          <h2 className="text-lg font-semibold text-foreground">
+                            Subtask
+                          </h2>
+
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Add a subtask to "{selectedsubTask.title}"
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsSubtaskModalOpen(false)}
+                          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Form */}
+                      <div className="space-y-4 p-6">
+
+                        {/* Title */}
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium">
+                            Subtask Title
+                          </label>
+
+                          <Input
+                            placeholder="Enter subtask title"
+                            value={subtaskForm.title}
+                            onChange={(e) =>
+                              setSubtaskForm({
+                                ...subtaskForm,
+                                title: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium">
+                            Description
+                          </label>
+
+                          <Textarea
+                            placeholder="Enter subtask description"
+                            value={subtaskForm.description}
+                            onChange={(e) =>
+                              setSubtaskForm({
+                                ...subtaskForm,
+                                description: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        {/* Priority */}
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium">
+                            Priority
+                          </label>
+
+                          <select
+                            value={subtaskForm.priority}
+                            onChange={(e) =>
+                              setSubtaskForm({
+                                ...subtaskForm,
+                                priority: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                          >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                          </select>
+                        </div>
+
+                        {/* Assignee */}
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium">
+                            Assignee
+                          </label>
+
+                          <select
+                            value={subtaskForm.assigneeName}
+                            onChange={(e) =>
+                              setSubtaskForm({
+                                ...subtaskForm,
+                                assigneeName: e.target.value,
+                              })
+                            }
+                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                          >
+                            <option value="">Select assignee</option>
+
+                            {employees.map((employee) => (
+                              <option key={employee.id} value={employee.name}>
+                                {employee.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Due Date */}
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium">
+                            Due Date
+                          </label>
+
+                          <Input
+                            type="date"
+                            value={subtaskForm.dueDate}
+                            onChange={(e) =>
+                              setSubtaskForm({
+                                ...subtaskForm,
+                                dueDate: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex justify-end gap-3 pt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsSubtaskModalOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+
+                          <Button
+                            type="button"
+                            onClick={() => { addsubtask(); setSelectedsubTask(null) }}
+                          >
+                            Add Subtask
+                          </Button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
+
 
               {columnTasks.length > 0 && (
                 <div className="px-4 pb-4">
@@ -1166,128 +1435,6 @@ const handleOpenComments = async (task: KanbanTask) => {
 
         <div className="grid grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-4">
           <div className="lg:col-span-3">
-            {/* Desktop / tablet table (hidden on mobile) */}
-            {/* <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-card">
-                    <th className="px-5 py-3 text-left font-semibold text-muted-foreground">
-                      Date
-                    </th>
-                    <th className="px-5 py-3 text-left font-semibold text-muted-foreground">
-                      Task Description
-                    </th>
-                    <th className="px-5 py-3 text-left font-semibold text-muted-foreground">
-                      Duration
-                    </th>
-                    <th className="px-5 py-3 text-left font-semibold text-muted-foreground">
-                      Task (Related)
-                    </th>
-                    <th className="px-5 py-3 text-left font-semibold text-muted-foreground">
-                      Approval
-                    </th>
-                    <th className="px-5 py-3 text-center font-semibold text-muted-foreground">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {projectTimesheets.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
-                        No timesheet entries yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    projectTimesheets.map((item) => {
-                      const relatedTask = getTaskById(item.task_id);
-
-                      const hour = Math.floor(item.time_duration / 60);
-                      const minute = item.time_duration % 60;
-
-                      return (
-                        <tr key={item.id} className="border-b border-border last:border-0 ">
-                          <td className="whitespace-nowrap px-5 py-4 text-muted-foreground">
-                            {new Date(item.created_at).toLocaleDateString()}
-                          </td>
-
-                          <td className="px-5 py-4 text-muted-foreground">
-                            {item.task_description}
-                          </td>
-
-                          <td className="whitespace-nowrap px-5 py-4 font-medium text-foreground">
-                            {hour}h {minute}m
-                          </td>
-
-                          <td className="px-5 py-4">
-                            {relatedTask ? (
-                              <span className="text-muted-foreground">{relatedTask.title}</span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            {item.approval_status === "approved" ? (
-                              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                                Approved
-                              </span>
-                            ) : item.approval_status === "rejected" ? (
-                              <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                                Rejected
-                              </span>
-                            ) : (
-                              <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
-                                Pending
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button
-                                variant="ghost"
-                                // className="rounded-lg border border-border p-2 text-slate-500 hover:bg-slate-100"
-                                onClick={() => handleEditTimesheet(item)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-
-                              <Button
-                                variant="ghost"
-                                className="text-muted-foreground hover:text-destructive"
-                                // className="rounded-lg border border-border p-2 text-red-500 hover:bg-red-50"
-                                onClick={() => handleDeleteTimesheet(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-
-                              {isTL && item.approval_status === "pending" && (
-                                <>
-                                  <button
-                                    onClick={() => handleTimesheetApproval(item.id, "approved")}
-                                    className="rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700"
-                                  >
-                                    Approve
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleTimesheetApproval(item.id, "rejected")}
-                                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div> */}
             <div className="overflow-hidden rounded-md border border-border bg-card shadow-soft">
               <div className="overflow-x-auto">
                 <Table>
@@ -1554,297 +1701,197 @@ const handleOpenComments = async (task: KanbanTask) => {
           </form>
         </Modal>
       )}
-    
-      {/* <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-            <div className="w-[550px] rounded-xl bg-card p-6 shadow-xl">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">
-                  {editingTimesheet ? "Edit Timesheet" : "Add Timesheet"}
-                </h2>
 
-                <Button
-                  // type="button"
-                  onClick={() => {
-                    setIsTimesheetOpen(false);
-                    setEditingTimesheet(null);
-                  }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition  hover:text-white bg-card hover:bg-red-500 focus:outline-none"
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-
-              <div className="space-y-5 text-muted-foreground">
-                <div>
-                  <label className="mb-2 block font-medium text-foreground">Task Description</label>
-                  <Textarea
-                    rows={5}
-                    value={taskDescription}
-                    onChange={(e) => {
-                      setTaskDescription(e.target.value);
-                      setIsChanged(true);
-                    }}
-                    // className="w-full rounded-lg border p-3"
-                    placeholder="Enter task description..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-2 block font-medium">Hours</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={hours}
-                      onChange={(e) => {
-                        setHours(e.target.value);
-                        setIsChanged(true);
-                      }}
-                      className="
-                        [appearance:textfield]
-                        [&::-webkit-inner-spin-button]:appearance-none
-                        [&::-webkit-outer-spin-button]:appearance-none
-                      "
-                      // className="w-full rounded-lg border border-border p-3 focus:border-blue-500 focus:outline-none"
-                      placeholder="e.g. 2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block font-medium">Minutes</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={59}
-                      value={minutes}
-                      onChange={(e) => {
-                        setMinutes(e.target.value);
-                        setIsChanged(true);
-                      }}
-                      className="
-                        [appearance:textfield]
-                        [&::-webkit-inner-spin-button]:appearance-none
-                        [&::-webkit-outer-spin-button]:appearance-none
-                      "
-                      // className="w-full rounded-lg border border-border p-3 focus:border-blue-500 focus:outline-none"
-                      placeholder="e.g. 30"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <Button
-                    variant={"ghost"}
-                    onClick={() => setIsTimesheetOpen(false)}
-                    // className="rounded-lg border px-5 py-2"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveTimesheet}
-                    disabled={!!editingTimesheet && !isChanged}
-                    // className={`rounded-lg px-5 py-2 text-white ${
-                    //   editingTimesheet && !isChanged
-                    //     ? "cursor-not-allowed bg-gray-300"
-                    //     : "bg-blue-600 hover:bg-blue-700"
-                    // }`}
-                  >
-                    {editingTimesheet ? "Update Timesheet" : "Save Timesheet"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div> */}
 
       {isCommentsOpen && (
         <Modal
-        open={isCommentsOpen}
-        onOpenChange={(open) => {
-          setIsCommentsOpen(open);
+          open={isCommentsOpen}
+          onOpenChange={(open) => {
+            setIsCommentsOpen(open);
 
-          if (!open) {
-            setEditingCommentId(null);
-            setEditingCommentText("");
-          }
-        }}
-        title="Comments"
-      >
-        <div className="space-y-4">
+            if (!open) {
+              setEditingCommentId(null);
+              setEditingCommentText("");
+            }
+          }}
+          title="Comments"
+        >
+          <div className="space-y-4">
 
-          {/* Task title */}
-          {selectedTask && (
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                {selectedTask.title}
-              </h3>
+            {/* Task title */}
+            {selectedTask && (
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  {selectedTask.title}
+                </h3>
 
-              <p className="mt-1 text-xs text-muted-foreground">
-                Task comments
-              </p>
-            </div>
-          )}
-
-          {/* Comments */}
-          <div className="max-h-80 space-y-3 overflow-y-auto">
-            {commentsLoading ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                Loading comments...
-              </div>
-            ) : comments.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                No comments yet.
-              </div>
-            ) : (
-              comments.map((comment) => {
-        const isEditing = editingCommentId === comment.id;
-
-        return (
-          <div
-            key={comment.id}
-            className="rounded-xl border border-border bg-background p-3"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-sm font-semibold text-foreground">
-                  {comment.user_name || "TL"}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Task comments
                 </p>
               </div>
-
-              <div className="flex items-center gap-2">
-                {/* Edit button */}
-                {isTL && !isEditing && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingCommentId(comment.id);
-                      setEditingCommentText(comment.comment);
-                    }}
-                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                    title="Edit comment"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                )}
-
-                {/* Delete button */}
-                {isTL && !isEditing && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleDeleteComment(comment.id)
-                    }
-                    disabled={commentUpdating}
-                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
-                    title="Delete comment"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-
-                {/* Date */}
-                <p className="text-xs text-muted-foreground">
-                  {new Date(comment.created_at).toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            {!isEditing && (
-              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                {comment.comment}
-              </p>
             )}
 
-            {/* Edit mode */}
-            {isEditing && (
-              <div className="mt-3 space-y-3">
+            {/* Comments */}
+            <div className="max-h-80 space-y-3 overflow-y-auto">
+              {commentsLoading ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Loading comments...
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No comments yet.
+                </div>
+              ) : (
+                comments.map((comment) => {
+                  const isEditing = editingCommentId === comment.id;
+
+                  return (
+                    <div
+                      key={comment.id}
+                      className="rounded-xl border border-border bg-background p-3"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-sm font-semibold text-foreground">
+                            {comment.user_name || "TL"}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Edit button */}
+                          {isTL && !isEditing && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditingCommentText(comment.comment);
+                              }}
+                              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                              title="Edit comment"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Delete button */}
+                          {isTL && !isEditing && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteComment(comment.id)
+                              }
+                              disabled={commentUpdating}
+                              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                              title="Delete comment"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Date */}
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(comment.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      {!isEditing && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                          {comment.comment}
+                        </p>
+                      )}
+
+                      {/* Edit mode */}
+                      {isEditing && (
+                        <div className="mt-3 space-y-3">
+                          <Textarea
+                            value={editingCommentText}
+                            onChange={(e) =>
+                              setEditingCommentText(e.target.value)
+                            }
+                            placeholder="Edit your comment..."
+                            rows={3}
+                            autoFocus
+                          />
+
+                          <div className="flex justify-end gap-2">
+                            {/* Cancel */}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEditComment}
+                              disabled={commentUpdating}
+                            >
+                              Cancel
+                            </Button>
+
+                            {/* Save */}
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() =>
+                                handleEditComment(comment.id)
+                              }
+                              disabled={
+                                commentUpdating ||
+                                !editingCommentText.trim()
+                              }
+                            >
+                              {commentUpdating ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Add new comment */}
+            {isTL ? (
+              <div className="space-y-3 border-t pt-4">
                 <Textarea
-                  value={editingCommentText}
+                  value={commentText}
                   onChange={(e) =>
-                    setEditingCommentText(e.target.value)
+                    setCommentText(e.target.value)
                   }
-                  placeholder="Edit your comment..."
+                  placeholder="Write a comment..."
                   rows={3}
-                  autoFocus
                 />
 
-                <div className="flex justify-end gap-2">
-                  {/* Cancel */}
+                <div className="mt-3 flex justify-end gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    onClick={handleCancelEditComment}
-                    disabled={commentUpdating}
+                    onClick={() => {
+                      setCommentText("");
+                      setIsCommentsOpen(false);
+                    }}
                   >
                     Cancel
                   </Button>
 
-                  {/* Save */}
                   <Button
                     type="button"
-                    size="sm"
-                    onClick={() =>
-                      handleEditComment(comment.id)
-                    }
-                    disabled={
-                      commentUpdating ||
-                      !editingCommentText.trim()
-                    }
+                    onClick={handleAddComment}
+                    disabled={!commentText.trim()}
                   >
-                    {commentUpdating ? "Saving..." : "Save"}
+                    Add Comment
                   </Button>
                 </div>
               </div>
+            ) : (
+              <div className="border-t pt-4 text-center text-xs text-muted-foreground">
+                Comments are added by the TL.
+              </div>
             )}
+
           </div>
-        );
-      })
-            )}
-          </div>
-
-          {/* Add new comment */}
-          {isTL ? (
-            <div className="space-y-3 border-t pt-4">
-              <Textarea
-                value={commentText}
-                onChange={(e) =>
-                  setCommentText(e.target.value)
-                }
-                placeholder="Write a comment..."
-                rows={3}
-              />
-
-            <div className="mt-3 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setCommentText("");
-                  setIsCommentsOpen(false);
-                }}
-              >
-                Cancel
-              </Button>
-
-              <Button
-                type="button"
-                onClick={handleAddComment}
-                disabled={!commentText.trim()}
-              >
-                Add Comment
-              </Button>
-            </div>
-            </div>
-          ) : (
-            <div className="border-t pt-4 text-center text-xs text-muted-foreground">
-              Comments are added by the TL.
-            </div>
-          )}
-
-        </div>
-      </Modal>
+        </Modal>
       )}
 
       <Modal
@@ -1867,11 +1914,11 @@ const handleOpenComments = async (task: KanbanTask) => {
                 {collaboratorTask.title}
               </p>
 
-            <p className="mt-1 text-xs text-muted-foreground">
-              {isTL
-                ? "Select employees who will collaborate on this task."
-                : "Employees collaborating on this task."}
-            </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isTL
+                  ? "Select employees who will collaborate on this task."
+                  : "Employees collaborating on this task."}
+              </p>
             </div>
           )}
 
@@ -1926,9 +1973,9 @@ const handleOpenComments = async (task: KanbanTask) => {
                           src={
                             employee.avatarUrl
                               ? connectSupabase.storage
-                                  .from("Employee")
-                                  .getPublicUrl(employee.avatarUrl)
-                                  .data.publicUrl
+                                .from("Employee")
+                                .getPublicUrl(employee.avatarUrl)
+                                .data.publicUrl
                               : undefined
                           }
                           alt={employee.name}
@@ -2005,115 +2052,113 @@ const handleOpenComments = async (task: KanbanTask) => {
                     );
                   })
                   .length === 0 ? (
-                    <div className="py-8 text-center">
-                      <User className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <div className="py-8 text-center">
+                    <User className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
 
-                      <p className="text-sm font-medium">
-                        No employees found
-                      </p>
+                    <p className="text-sm font-medium">
+                      No employees found
+                    </p>
 
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Try a different search.
-                      </p>
-                    </div>
-                  ) : (
-                    employees
-                      .filter((employee) => {
-                        if (employee.id === collaboratorTask?.assigneeId) {
-                          return false;
-                        }
-                        const search = collaboratorSearch
-                          .toLowerCase()
-                          .trim();
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Try a different search.
+                    </p>
+                  </div>
+                ) : (
+                  employees
+                    .filter((employee) => {
+                      if (employee.id === collaboratorTask?.assigneeId) {
+                        return false;
+                      }
+                      const search = collaboratorSearch
+                        .toLowerCase()
+                        .trim();
 
-                        if (!search) return true;
+                      if (!search) return true;
 
-                        return (
-                          employee.name
-                            ?.toLowerCase()
-                            .includes(search) ||
-                          employee.email
-                            ?.toLowerCase()
-                            .includes(search)
-                        );
-                      })
-                      .map((employee) => {
-                        const isSelected =
-                          selectedCollaborators.includes(employee.id);
+                      return (
+                        employee.name
+                          ?.toLowerCase()
+                          .includes(search) ||
+                        employee.email
+                          ?.toLowerCase()
+                          .includes(search)
+                      );
+                    })
+                    .map((employee) => {
+                      const isSelected =
+                        selectedCollaborators.includes(employee.id);
 
-                        return (
-                          <button
-                            key={employee.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedCollaborators((prev) =>
-                                isSelected
-                                  ? prev.filter(
-                                      (id) => id !== employee.id
-                                    )
-                                  : [...prev, employee.id]
-                              );
-                            }}
-                            className={`flex w-full items-center gap-3 rounded-md p-2.5 text-left transition ${
+                      return (
+                        <button
+                          key={employee.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCollaborators((prev) =>
                               isSelected
-                                ? "bg-primary/5"
-                                : "hover:bg-muted"
+                                ? prev.filter(
+                                  (id) => id !== employee.id
+                                )
+                                : [...prev, employee.id]
+                            );
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-md p-2.5 text-left transition ${isSelected
+                            ? "bg-primary/5"
+                            : "hover:bg-muted"
                             }`}
-                          >
+                        >
 
-                            <Avatar className="h-9 w-9 shrink-0">
-                              <AvatarImage
-                                src={
-                                  employee.avatarUrl
-                                    ? connectSupabase.storage
-                                        .from("Employee")
-                                        .getPublicUrl(
-                                          employee.avatarUrl
-                                        ).data.publicUrl
-                                    : undefined
-                                }
-                                alt={employee.name}
-                              />
+                          <Avatar className="h-9 w-9 shrink-0">
+                            <AvatarImage
+                              src={
+                                employee.avatarUrl
+                                  ? connectSupabase.storage
+                                    .from("Employee")
+                                    .getPublicUrl(
+                                      employee.avatarUrl
+                                    ).data.publicUrl
+                                  : undefined
+                              }
+                              alt={employee.name}
+                            />
 
-                              <AvatarFallback>
-                                {employee.name
-                                  ?.split(" ")
-                                  .map((name) => name[0])
-                                  .join("")
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <AvatarFallback>
+                              {employee.name
+                                ?.split(" ")
+                                .map((name) => name[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
 
-                            {/* Employee information */}
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium">
-                                {employee.name}
+                          {/* Employee information */}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {employee.name}
+                            </p>
+
+                            {employee.email && (
+                              <p className="truncate text-xs text-muted-foreground">
+                                {employee.email}
                               </p>
+                            )}
+                          </div>
 
-                              {employee.email && (
-                                <p className="truncate text-xs text-muted-foreground">
-                                  {employee.email}
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Checkbox */}
-                            <div
-                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                                isSelected
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-muted-foreground/40"
+                          {/* Checkbox */}
+                          <div
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/40"
                               }`}
-                            >
-                              {isSelected && (
-                                <Check className="h-3.5 w-3.5" />
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })
-                  )}
+                          >
+                            {isSelected && (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
+                )}
               </div>
             </div>
           )}
