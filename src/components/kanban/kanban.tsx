@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { connectSupabase } from "../../services/config";
 import { useParams } from "react-router-dom";
-import { CalendarDays, Pencil, Timer, Trash2, X, MessageSquare, UserPlus, Check, Users, Search, User, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  Pencil,
+  Timer,
+  Trash2,
+  X,
+  MessageSquare,
+  UserPlus,
+  Check,
+  Users,
+  Search,
+  User,
+  Plus,
+  Eye,
+  SquarePlus,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, Avatar } from "../ui/avatar";
 import { TaskStatus, TimeSheetType } from "@/lib/types";
@@ -14,6 +29,14 @@ import { Textarea } from "../ui/textarea";
 import { Table, TableHeader, TableRow, TableBody, TableHead, TableCell } from "../ui/table";
 import { CardsSkeleton, RowSkeleton } from "../ui-kit/loading-skeleton";
 import { Modal } from "../ui-kit/modal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 interface KanbanTask {
   id: string;
@@ -50,27 +73,37 @@ interface Employee {
   avatarUrl?: string;
 }
 
+interface SubtaskType {
+  title: string;
+  description: string;
+  priority: string;
+  assigneeName: string;
+  dueDate: string;
+  subtask_id: string;
+  id: number;
+}
+
 const columns: {
   id: TaskStatus;
   title: string;
 }[] = [
-    {
-      id: "todo",
-      title: "To Do",
-    },
-    {
-      id: "in_progress",
-      title: "In Progress",
-    },
-    {
-      id: "review",
-      title: "Review",
-    },
-    {
-      id: "completed",
-      title: "Completed",
-    },
-  ];
+  {
+    id: "todo",
+    title: "To Do",
+  },
+  {
+    id: "in_progress",
+    title: "In Progress",
+  },
+  {
+    id: "review",
+    title: "Review",
+  },
+  {
+    id: "completed",
+    title: "Completed",
+  },
+];
 
 export default function KanbanBoard() {
   const navigate = useNavigate();
@@ -98,19 +131,20 @@ export default function KanbanBoard() {
   // subtask
 
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState<boolean>(false);
-  const [selectedsubTask, setSelectedsubTask] = useState<KanbanTask | null>(null);
+  const [selectedsubTask, setSelectedsubTask] = useState<string | null>(null);
+  const [subtaskShow, setsubtaskShow] = useState<boolean>(false);
 
-  const [subtaskForm, setSubtaskForm] = useState<KanbanTask>({
+  const [subtaskForm, setSubtaskForm] = useState<SubtaskType>({
     title: "",
     description: "",
     priority: "medium",
     assigneeName: "",
     dueDate: "",
     subtask_id: "",
+    id: 0,
   });
 
-  const [subtasks, setsubtask] = useState<any[]>([])
-
+  const [subtasks, setsubtask] = useState<SubtaskType[]>([]);
   const [selectedEmp, setselectedEmp] = useState<string>("");
 
   const [taskDescription, setTaskDescription] = useState("");
@@ -118,7 +152,6 @@ export default function KanbanBoard() {
   const [minutes, setMinutes] = useState("00");
   const [timesheets, setTimesheets] = useState<TimeSheetType[]>([]);
   const [editingTimesheet, setEditingTimesheet] = useState<TimeSheetType | null>(null);
-
 
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
   const [isChanged, setIsChanged] = useState(false);
@@ -128,11 +161,11 @@ export default function KanbanBoard() {
   }>();
   const [rejectionModalTask, setRejectionModalTask] = useState<KanbanTask | null>(null);
 
-
-  const fetchsubtasks = async () => {
+  const fetchsubtasks = async (id: string) => {
     const { data, error } = await connectSupabase
       .from("subtask")
       .select("*")
+      .eq("id", id)
       .order("id", { ascending: false });
 
     if (error) {
@@ -142,11 +175,12 @@ export default function KanbanBoard() {
 
     setsubtask(data || []);
   };
+  console.log("heloo: s", subtasks);
 
   useEffect(() => {
     if (projectId) {
       fetchTasks();
-      fetchsubtasks();
+      // fetchsubtasks();
       fetchEmployees();
       fetchTimesheets();
       fetchCollaborators();
@@ -155,8 +189,6 @@ export default function KanbanBoard() {
       setLoading(false);
     }
   }, [projectId]);
-
-
 
   const checkUserRole = async () => {
     try {
@@ -235,9 +267,7 @@ export default function KanbanBoard() {
 
   const fetchCollaborators = async () => {
     try {
-      const { data, error } = await connectSupabase
-        .from("task_collaborators")
-        .select(`
+      const { data, error } = await connectSupabase.from("task_collaborators").select(`
         id,
         task_id,
         employee_id,
@@ -280,15 +310,12 @@ export default function KanbanBoard() {
 
     setCollaboratorTask(task);
 
-    setSelectedCollaborators(
-      existingCollaborators.map((employee) => employee.id)
-    );
+    setSelectedCollaborators(existingCollaborators.map((employee) => employee.id));
 
     setCollaboratorSearch("");
 
     setIsCollaboratorOpen(true);
   };
-
 
   const handleSaveCollaborators = async () => {
     if (!collaboratorTask) return;
@@ -301,8 +328,7 @@ export default function KanbanBoard() {
     try {
       setCollaboratorLoading(true);
 
-      const { data: userData, error: userError } =
-        await connectSupabase.auth.getUser();
+      const { data: userData, error: userError } = await connectSupabase.auth.getUser();
 
       if (userError || !userData.user) {
         toast.error("User not authenticated");
@@ -362,7 +388,6 @@ export default function KanbanBoard() {
     setEditingCommentText("");
   };
 
-
   const fetchTimesheets = async () => {
     const { data, error } = await connectSupabase
       .from("timesheets")
@@ -385,10 +410,7 @@ export default function KanbanBoard() {
     try {
       setCommentUpdating(true);
 
-      const { error } = await connectSupabase
-        .from("task_comments")
-        .delete()
-        .eq("id", commentId);
+      const { error } = await connectSupabase.from("task_comments").delete().eq("id", commentId);
 
       if (error) {
         console.error("Error deleting comment:", error);
@@ -449,12 +471,11 @@ export default function KanbanBoard() {
       }
 
       // Find employee using email
-      const { data: employeeData, error: employeeError } =
-        await connectSupabase
-          .from("employee")
-          .select("id, name, email")
-          .eq("email", user.email)
-          .single();
+      const { data: employeeData, error: employeeError } = await connectSupabase
+        .from("employee")
+        .select("id, name, email")
+        .eq("email", user.email)
+        .single();
 
       if (employeeError) {
         console.error("Employee fetch error:", employeeError);
@@ -505,13 +526,11 @@ export default function KanbanBoard() {
         return;
       }
 
-      const { error } = await connectSupabase
-        .from("task_comments")
-        .insert({
-          task_id: selectedTask.id,
-          user_id: user.id,
-          comment: commentText.trim(),
-        });
+      const { error } = await connectSupabase.from("task_comments").insert({
+        task_id: selectedTask.id,
+        user_id: user.id,
+        comment: commentText.trim(),
+      });
 
       if (error) {
         console.error("Add comment error:", error);
@@ -649,10 +668,10 @@ export default function KanbanBoard() {
         previousTasks.map((task) =>
           task.id === draggedTask.id
             ? {
-              ...task,
-              status: newStatus,
-              approval_status: newStatus === "review" ? "pending" : task.approval_status,
-            }
+                ...task,
+                status: newStatus,
+                approval_status: newStatus === "review" ? "pending" : task.approval_status,
+              }
             : task,
         ),
       );
@@ -811,6 +830,11 @@ export default function KanbanBoard() {
     setIsChanged(false);
     setIsTimesheetOpen(true);
   };
+  useEffect(() => {
+    if (selectedsubTask) {
+      fetchsubtasks(selectedsubTask);
+    }
+  }, [selectedsubTask]);
 
   const filterEmployee = (id?: string) => {
     if (!id) return tasks;
@@ -835,26 +859,22 @@ export default function KanbanBoard() {
     );
   }
 
-
-
   const addsubtask = async () => {
-    if (!selectedsubTask?.id) {
+    if (!selectedsubTask) {
       toast.error("Main task not selected");
       return;
     }
 
-    const { data, error } = await connectSupabase
-      .from("subtask")
-      .insert([
-        {
-          title: subtaskForm.title.trim(),
-          description: subtaskForm.description.trim(),
-          priority: subtaskForm.priority,
-          assigneeName: subtaskForm.assigneeName,
-          dueDate: subtaskForm.dueDate || null,
-          subtask_id: selectedsubTask?.id,
-        },
-      ]);
+    const { data, error } = await connectSupabase.from("subtask").insert([
+      {
+        title: subtaskForm.title.trim(),
+        description: subtaskForm.description.trim(),
+        priority: subtaskForm.priority,
+        assigneeName: subtaskForm.assigneeName,
+        dueDate: subtaskForm.dueDate || null,
+        subtask_id: selectedsubTask,
+      },
+    ]);
 
     console.log("Subtask data:", data);
     console.log("Subtask error:", error);
@@ -866,7 +886,7 @@ export default function KanbanBoard() {
 
     toast.success("Subtask created successfully");
 
-    await fetchsubtasks();
+    // await fetchsubtasks();
 
     setSubtaskForm({
       title: "",
@@ -874,12 +894,13 @@ export default function KanbanBoard() {
       priority: "medium",
       assigneeName: "",
       dueDate: "",
+      subtask_id: "",
+      id: 0,
     });
 
     setIsSubtaskModalOpen(false);
     setSelectedsubTask(null);
   };
-
 
   return (
     <div className="min-h-screen">
@@ -891,7 +912,6 @@ export default function KanbanBoard() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-
           <div className="flex items-center justify-between m-2">
             {employees.slice(0, 5).map((v) => (
               <Avatar
@@ -1032,45 +1052,46 @@ export default function KanbanBoard() {
                         (task.status === "review" && task.approval_status === "pending") ||
                         (task.status === "completed" && task.approval_status === "approved") ||
                         (task.approval_status === "rejected" && task.rejection_reason)) && (
-                          <div className="mt-4 mb-4 flex items-center gap-1.5">
-                            {task.priority && (
-                              <span
-                                className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${task.priority.toLowerCase() === "high"
+                        <div className="mt-4 mb-4 flex items-center gap-1.5">
+                          {task.priority && (
+                            <span
+                              className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                task.priority.toLowerCase() === "high"
                                   ? "bg-red-100 text-red-700"
                                   : task.priority.toLowerCase() === "medium"
                                     ? "bg-yellow-100 text-yellow-700"
                                     : "bg-green-100 text-green-700"
-                                  }`}
-                              >
-                                {task.priority}
-                              </span>
-                            )}
+                              }`}
+                            >
+                              {task.priority}
+                            </span>
+                          )}
 
-                            {task.status === "review" && task.approval_status === "pending" && (
-                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-600/20">
-                                <Clock size={11} strokeWidth={2.5} />
-                                Pending
-                              </span>
-                            )}
+                          {task.status === "review" && task.approval_status === "pending" && (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-600/20">
+                              <Clock size={11} strokeWidth={2.5} />
+                              Pending
+                            </span>
+                          )}
 
-                            {task.status === "completed" && task.approval_status === "approved" && (
-                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-600/20">
-                                ✓ Approved
-                              </span>
-                            )}
+                          {task.status === "completed" && task.approval_status === "approved" && (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-600/20">
+                              ✓ Approved
+                            </span>
+                          )}
 
-                            {task.approval_status === "rejected" && task.rejection_reason && (
-                              <button
-                                type="button"
-                                onClick={() => setRejectionModalTask(task)}
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/20 hover:bg-red-100 "
-                              >
-                                <XCircle size={11} strokeWidth={2.5} />
-                                Rejected
-                              </button>
-                            )}
-                          </div>
-                        )}
+                          {task.approval_status === "rejected" && task.rejection_reason && (
+                            <button
+                              type="button"
+                              onClick={() => setRejectionModalTask(task)}
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/20 hover:bg-red-100 "
+                            >
+                              <XCircle size={11} strokeWidth={2.5} />
+                              Rejected
+                            </button>
+                          )}
+                        </div>
+                      )}
                       {/* <div className="my-4 border-t border-border" /> */}
 
                       <div className="flex items-center justify-between">
@@ -1149,8 +1170,8 @@ export default function KanbanBoard() {
                                       src={
                                         employee.avatarUrl
                                           ? connectSupabase.storage
-                                            .from("Employee")
-                                            .getPublicUrl(employee.avatarUrl).data.publicUrl
+                                              .from("Employee")
+                                              .getPublicUrl(employee.avatarUrl).data.publicUrl
                                           : undefined
                                       }
                                       alt={employee.name}
@@ -1198,10 +1219,11 @@ export default function KanbanBoard() {
                         </div>
                       </div>
 
-                      <div className="mt-4 ">
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        {/* New Timesheet */}
                         <Button
-                          //  variant={"secondary"}
-                          className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                          variant="default"
+                          className="flex-1"
                           onClick={() => {
                             setSelectedTask(task);
                             setTaskDescription("");
@@ -1214,30 +1236,68 @@ export default function KanbanBoard() {
                           <Timer />
                           New Timesheet
                         </Button>
+
+                        {/* Subtask */}
+                        <div className="flex-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => {
+                                  setSelectedsubTask(task.id);
+                                  setIsSubtaskModalOpen(true);
+                                }}
+                              >
+                                <SquarePlus />
+                                Subtask
+                              </Button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => setIsSubtaskModalOpen(true)}
+                                className="cursor-pointer"
+                              >
+                                <span>
+                                  <Plus />
+                                </span>
+                                Add subtask
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setsubtaskShow(true);
+                                  setSelectedsubTask(task.id);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <span>
+                                  <Eye></Eye>
+                                </span>
+                                Show subtasks
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
-
                   ))
                 )}
 
                 {columnTasks.map((task) => (
                   <div key={task.id}>
-
                     <div className="mt-3 space-y-2">
                       {subtasks
                         .filter(
-                          (subtask) =>
-                            String(subtask.subtask_id).trim() ===
-                            String(task.id).trim()
+                          (subtask) => String(subtask.subtask_id).trim() === String(task.id).trim(),
                         )
                         .map((subtask) => (
                           <div
                             key={subtask.id}
                             className="rounded-md border border-border bg-muted/30 p-3"
                           >
-                            <p className="text-sm font-semibold text-foreground">
-                              {subtask.title}
-                            </p>
+                            <p className="text-sm font-semibold text-foreground">{subtask.title}</p>
 
                             {subtask.description && (
                               <p className="mt-1 text-xs text-muted-foreground">
@@ -1247,7 +1307,7 @@ export default function KanbanBoard() {
                           </div>
                         ))}
 
-                      <button
+                      {/* <button
                         type="button"
                         onClick={() => {
                           setSelectedsubTask(task);
@@ -1257,165 +1317,154 @@ export default function KanbanBoard() {
                       >
                         <Plus className="h-4 w-4" />
                         Add Subtask
-                      </button>
+                      </button> */}
                     </div>
-
                   </div>
                 ))}
-                {isSubtaskModalOpen && selectedsubTask && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-xl border border-border bg-background shadow-xl">
+                {isSubtaskModalOpen && (
+                  <Modal
+                    open={isSubtaskModalOpen}
+                    onOpenChange={(open) => setIsSubtaskModalOpen(open)}
+                    title="Subtask"
+                  >
+                    {/* <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"> */}
+                    {/* <div className="w-full max-w-lg rounded-xl border border-border bg-background shadow-xl"> */}
+                    {/* <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                      <div>
+                        <h2 className="text-lg font-semibold text-foreground">Subtask</h2>
 
-                      <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                        <div>
-                          <h2 className="text-lg font-semibold text-foreground">
-                            Subtask
-                          </h2>
-
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Add a subtask to "{selectedsubTask.title}"
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setIsSubtaskModalOpen(false)}
-                          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        >
-                          ✕
-                        </button>
+                        {/* <p className="mt-1 text-xs text-muted-foreground">Add subtask </p>
                       </div>
 
-                      {/* Form */}
-                      <div className="space-y-4 p-6">
+                      <button
+                        type="button"
+                        onClick={() => setIsSubtaskModalOpen(false)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        ✕
+                      </button>
+                    </div> */}
 
-                        {/* Title */}
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">
-                            Subtask Title
-                          </label>
+                    {/* Form */}
+                    <div className="space-y-4 ">
+                      {/* Title */}
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Subtask Title</label>
 
-                          <Input
-                            placeholder="Enter subtask title"
-                            value={subtaskForm.title}
-                            onChange={(e) =>
-                              setSubtaskForm({
-                                ...subtaskForm,
-                                title: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
+                        <Input
+                          placeholder="Enter subtask title"
+                          value={subtaskForm.title}
+                          onChange={(e) =>
+                            setSubtaskForm({
+                              ...subtaskForm,
+                              title: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                        {/* Description */}
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">
-                            Description
-                          </label>
+                      {/* Description */}
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Description</label>
 
-                          <Textarea
-                            placeholder="Enter subtask description"
-                            value={subtaskForm.description}
-                            onChange={(e) =>
-                              setSubtaskForm({
-                                ...subtaskForm,
-                                description: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
+                        <Textarea
+                          placeholder="Enter subtask description"
+                          value={subtaskForm.description}
+                          onChange={(e) =>
+                            setSubtaskForm({
+                              ...subtaskForm,
+                              description: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                        {/* Priority */}
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">
-                            Priority
-                          </label>
+                      {/* Priority */}
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Priority</label>
 
-                          <select
-                            value={subtaskForm.priority}
-                            onChange={(e) =>
-                              setSubtaskForm({
-                                ...subtaskForm,
-                                priority: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                          >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                          </select>
-                        </div>
+                        <select
+                          value={subtaskForm.priority}
+                          onChange={(e) =>
+                            setSubtaskForm({
+                              ...subtaskForm,
+                              priority: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                      </div>
 
-                        {/* Assignee */}
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">
-                            Assignee
-                          </label>
+                      {/* Assignee */}
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Assignee</label>
 
-                          <select
-                            value={subtaskForm.assigneeName}
-                            onChange={(e) =>
-                              setSubtaskForm({
-                                ...subtaskForm,
-                                assigneeName: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                          >
-                            <option value="">Select assignee</option>
+                        <select
+                          value={subtaskForm.assigneeName}
+                          onChange={(e) =>
+                            setSubtaskForm({
+                              ...subtaskForm,
+                              assigneeName: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">Select assignee</option>
 
-                            {employees.map((employee) => (
-                              <option key={employee.id} value={employee.name}>
-                                {employee.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                          {employees.map((employee) => (
+                            <option key={employee.id} value={employee.name}>
+                              {employee.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                        {/* Due Date */}
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">
-                            Due Date
-                          </label>
+                      {/* Due Date */}
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium">Due Date</label>
 
-                          <Input
-                            type="date"
-                            value={subtaskForm.dueDate}
-                            onChange={(e) =>
-                              setSubtaskForm({
-                                ...subtaskForm,
-                                dueDate: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
+                        <Input
+                          type="date"
+                          value={subtaskForm.dueDate}
+                          onChange={(e) =>
+                            setSubtaskForm({
+                              ...subtaskForm,
+                              dueDate: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
 
-                        {/* Buttons */}
-                        <div className="flex justify-end gap-3 pt-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsSubtaskModalOpen(false)}
-                          >
-                            Cancel
-                          </Button>
+                      {/* Buttons */}
+                      <div className="flex justify-end gap-3 pt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsSubtaskModalOpen(false)}
+                        >
+                          Cancel
+                        </Button>
 
-                          <Button
-                            type="button"
-                            onClick={() => { addsubtask(); setSelectedsubTask(null) }}
-                          >
-                            Add Subtask
-                          </Button>
-                        </div>
-
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            addsubtask();
+                            setSelectedsubTask(null);
+                          }}
+                        >
+                          Add Subtask
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                    {/* </div> */}
+                    {/* </div> */}
+                  </Modal>
                 )}
               </div>
-
-
 
               {columnTasks.length > 0 && (
                 <div className="px-4 pb-4">
@@ -1702,7 +1751,6 @@ export default function KanbanBoard() {
         </Modal>
       )}
 
-
       {isCommentsOpen && (
         <Modal
           open={isCommentsOpen}
@@ -1717,17 +1765,12 @@ export default function KanbanBoard() {
           title="Comments"
         >
           <div className="space-y-4">
-
             {/* Task title */}
             {selectedTask && (
               <div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  {selectedTask.title}
-                </h3>
+                <h3 className="text-sm font-semibold text-foreground">{selectedTask.title}</h3>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Task comments
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Task comments</p>
               </div>
             )}
 
@@ -1779,9 +1822,7 @@ export default function KanbanBoard() {
                           {isTL && !isEditing && (
                             <button
                               type="button"
-                              onClick={() =>
-                                handleDeleteComment(comment.id)
-                              }
+                              onClick={() => handleDeleteComment(comment.id)}
                               disabled={commentUpdating}
                               className="rounded-md p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                               title="Delete comment"
@@ -1808,9 +1849,7 @@ export default function KanbanBoard() {
                         <div className="mt-3 space-y-3">
                           <Textarea
                             value={editingCommentText}
-                            onChange={(e) =>
-                              setEditingCommentText(e.target.value)
-                            }
+                            onChange={(e) => setEditingCommentText(e.target.value)}
                             placeholder="Edit your comment..."
                             rows={3}
                             autoFocus
@@ -1832,13 +1871,8 @@ export default function KanbanBoard() {
                             <Button
                               type="button"
                               size="sm"
-                              onClick={() =>
-                                handleEditComment(comment.id)
-                              }
-                              disabled={
-                                commentUpdating ||
-                                !editingCommentText.trim()
-                              }
+                              onClick={() => handleEditComment(comment.id)}
+                              disabled={commentUpdating || !editingCommentText.trim()}
                             >
                               {commentUpdating ? "Saving..." : "Save"}
                             </Button>
@@ -1856,9 +1890,7 @@ export default function KanbanBoard() {
               <div className="space-y-3 border-t pt-4">
                 <Textarea
                   value={commentText}
-                  onChange={(e) =>
-                    setCommentText(e.target.value)
-                  }
+                  onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Write a comment..."
                   rows={3}
                 />
@@ -1875,11 +1907,7 @@ export default function KanbanBoard() {
                     Cancel
                   </Button>
 
-                  <Button
-                    type="button"
-                    onClick={handleAddComment}
-                    disabled={!commentText.trim()}
-                  >
+                  <Button type="button" onClick={handleAddComment} disabled={!commentText.trim()}>
                     Add Comment
                   </Button>
                 </div>
@@ -1889,10 +1917,24 @@ export default function KanbanBoard() {
                 Comments are added by the TL.
               </div>
             )}
-
           </div>
         </Modal>
       )}
+
+      {/* subtask show task */}
+      <Modal open={subtaskShow} onOpenChange={(open) => setsubtaskShow(open)} title="Subtask">
+        {subtasks.length > 0 ? (
+          subtasks.map((v) => (
+            <div className="rounded-lg border bg-background border-border p-2">
+              <h3 className="text-base font-semibold text-foreground">{v.title}</h3>
+
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">{v.description}</p>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-400 text-lg font-medium py-10">No data available</p>
+        )}
+      </Modal>
 
       <Modal
         open={isCollaboratorOpen}
@@ -1906,13 +1948,10 @@ export default function KanbanBoard() {
         title={isTL ? "Manage Collaborators" : "Collaborators"}
       >
         <div className="space-y-5">
-
           {/* Task Information */}
           {collaboratorTask && (
             <div className="rounded-lg border bg-muted/30 p-3">
-              <p className="text-sm font-semibold text-foreground">
-                {collaboratorTask.title}
-              </p>
+              <p className="text-sm font-semibold text-foreground">{collaboratorTask.title}</p>
 
               <p className="mt-1 text-xs text-muted-foreground">
                 {isTL
@@ -1931,9 +1970,7 @@ export default function KanbanBoard() {
                 <Input
                   placeholder="Search employee..."
                   value={collaboratorSearch}
-                  onChange={(e) =>
-                    setCollaboratorSearch(e.target.value)
-                  }
+                  onChange={(e) => setCollaboratorSearch(e.target.value)}
                   className="pl-9"
                 />
               </div>
@@ -1944,9 +1981,7 @@ export default function KanbanBoard() {
           {selectedCollaborators.length > 0 && (
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-medium">
-                  Current Collaborators
-                </p>
+                <p className="text-sm font-medium">Current Collaborators</p>
 
                 {isTL && (
                   <span className="text-xs text-muted-foreground">
@@ -1957,9 +1992,7 @@ export default function KanbanBoard() {
 
               <div className="space-y-2">
                 {selectedCollaborators.map((employeeId) => {
-                  const employee = employees.find(
-                    (emp) => emp.id === employeeId
-                  );
+                  const employee = employees.find((emp) => emp.id === employeeId);
 
                   if (!employee) return null;
 
@@ -1973,9 +2006,8 @@ export default function KanbanBoard() {
                           src={
                             employee.avatarUrl
                               ? connectSupabase.storage
-                                .from("Employee")
-                                .getPublicUrl(employee.avatarUrl)
-                                .data.publicUrl
+                                  .from("Employee")
+                                  .getPublicUrl(employee.avatarUrl).data.publicUrl
                               : undefined
                           }
                           alt={employee.name}
@@ -1992,14 +2024,10 @@ export default function KanbanBoard() {
                       </Avatar>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {employee.name}
-                        </p>
+                        <p className="truncate text-sm font-medium">{employee.name}</p>
 
                         {employee.email && (
-                          <p className="truncate text-xs text-muted-foreground">
-                            {employee.email}
-                          </p>
+                          <p className="truncate text-xs text-muted-foreground">{employee.email}</p>
                         )}
                       </div>
 
@@ -2008,7 +2036,7 @@ export default function KanbanBoard() {
                           type="button"
                           onClick={() => {
                             setSelectedCollaborators((prev) =>
-                              prev.filter((id) => id !== employee.id)
+                              prev.filter((id) => id !== employee.id),
                             );
                           }}
                           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -2026,42 +2054,28 @@ export default function KanbanBoard() {
           {/* Available Employees */}
           {isTL && (
             <div>
-              <p className="mb-2 text-sm font-medium">
-                Add Collaborators
-              </p>
+              <p className="mb-2 text-sm font-medium">Add Collaborators</p>
 
               <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-1">
-                {employees
-                  .filter((employee) => {
-                    if (employee.id === collaboratorTask?.assigneeId) {
-                      return false;
-                    }
-                    const search = collaboratorSearch
-                      .toLowerCase()
-                      .trim();
+                {employees.filter((employee) => {
+                  if (employee.id === collaboratorTask?.assigneeId) {
+                    return false;
+                  }
+                  const search = collaboratorSearch.toLowerCase().trim();
 
-                    if (!search) return true;
+                  if (!search) return true;
 
-                    return (
-                      employee.name
-                        ?.toLowerCase()
-                        .includes(search) ||
-                      employee.email
-                        ?.toLowerCase()
-                        .includes(search)
-                    );
-                  })
-                  .length === 0 ? (
+                  return (
+                    employee.name?.toLowerCase().includes(search) ||
+                    employee.email?.toLowerCase().includes(search)
+                  );
+                }).length === 0 ? (
                   <div className="py-8 text-center">
                     <User className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
 
-                    <p className="text-sm font-medium">
-                      No employees found
-                    </p>
+                    <p className="text-sm font-medium">No employees found</p>
 
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Try a different search.
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Try a different search.</p>
                   </div>
                 ) : (
                   employees
@@ -2069,24 +2083,17 @@ export default function KanbanBoard() {
                       if (employee.id === collaboratorTask?.assigneeId) {
                         return false;
                       }
-                      const search = collaboratorSearch
-                        .toLowerCase()
-                        .trim();
+                      const search = collaboratorSearch.toLowerCase().trim();
 
                       if (!search) return true;
 
                       return (
-                        employee.name
-                          ?.toLowerCase()
-                          .includes(search) ||
-                        employee.email
-                          ?.toLowerCase()
-                          .includes(search)
+                        employee.name?.toLowerCase().includes(search) ||
+                        employee.email?.toLowerCase().includes(search)
                       );
                     })
                     .map((employee) => {
-                      const isSelected =
-                        selectedCollaborators.includes(employee.id);
+                      const isSelected = selectedCollaborators.includes(employee.id);
 
                       return (
                         <button
@@ -2095,27 +2102,21 @@ export default function KanbanBoard() {
                           onClick={() => {
                             setSelectedCollaborators((prev) =>
                               isSelected
-                                ? prev.filter(
-                                  (id) => id !== employee.id
-                                )
-                                : [...prev, employee.id]
+                                ? prev.filter((id) => id !== employee.id)
+                                : [...prev, employee.id],
                             );
                           }}
-                          className={`flex w-full items-center gap-3 rounded-md p-2.5 text-left transition ${isSelected
-                            ? "bg-primary/5"
-                            : "hover:bg-muted"
-                            }`}
+                          className={`flex w-full items-center gap-3 rounded-md p-2.5 text-left transition ${
+                            isSelected ? "bg-primary/5" : "hover:bg-muted"
+                          }`}
                         >
-
                           <Avatar className="h-9 w-9 shrink-0">
                             <AvatarImage
                               src={
                                 employee.avatarUrl
                                   ? connectSupabase.storage
-                                    .from("Employee")
-                                    .getPublicUrl(
-                                      employee.avatarUrl
-                                    ).data.publicUrl
+                                      .from("Employee")
+                                      .getPublicUrl(employee.avatarUrl).data.publicUrl
                                   : undefined
                               }
                               alt={employee.name}
@@ -2133,9 +2134,7 @@ export default function KanbanBoard() {
 
                           {/* Employee information */}
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              {employee.name}
-                            </p>
+                            <p className="truncate text-sm font-medium">{employee.name}</p>
 
                             {employee.email && (
                               <p className="truncate text-xs text-muted-foreground">
@@ -2146,14 +2145,13 @@ export default function KanbanBoard() {
 
                           {/* Checkbox */}
                           <div
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-muted-foreground/40"
-                              }`}
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-muted-foreground/40"
+                            }`}
                           >
-                            {isSelected && (
-                              <Check className="h-3.5 w-3.5" />
-                            )}
+                            {isSelected && <Check className="h-3.5 w-3.5" />}
                           </div>
                         </button>
                       );
@@ -2166,11 +2164,7 @@ export default function KanbanBoard() {
           {/* Footer */}
           {isTL ? (
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsCollaboratorOpen(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setIsCollaboratorOpen(false)}>
                 Cancel
               </Button>
               <Button
@@ -2183,16 +2177,11 @@ export default function KanbanBoard() {
             </div>
           ) : (
             <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsCollaboratorOpen(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setIsCollaboratorOpen(false)}>
                 Close
               </Button>
             </div>
           )}
-
         </div>
       </Modal>
 

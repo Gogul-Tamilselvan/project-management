@@ -41,6 +41,7 @@ import { Employee, EmployeeStatus } from "@/lib/types";
 import { connectSupabase } from "@/services/config";
 import { toast } from "sonner";
 import { TableSkeleton } from "@/components/ui-kit/loading-skeleton";
+import { getCurrentUserRoleService } from "@/services/AuthService";
 
 export function EmployeesPage() {
   const [open, setOpen] = useState<boolean>(false);
@@ -49,6 +50,7 @@ export function EmployeesPage() {
   const [proDetails, setproDetails] = useState<Employee>();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [loading, setloading] = useState<boolean>(true);
+  const [userRole, setuserRole] = useState<string>("none");
 
   const [query, setQuery] = useState<string>("");
   const [data, setData] = useState<Employee[]>();
@@ -74,10 +76,16 @@ export function EmployeesPage() {
       setloading(false);
     }
   };
+  const getRole = async () => {
+    const res = await getCurrentUserRoleService();
+  };
 
   useEffect(() => {
     getEmployes();
   }, [open, editopen, profile]);
+  useEffect(() => {
+    getRole();
+  }, []);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -113,7 +121,9 @@ export function EmployeesPage() {
                   <TableHead>Department</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="pr-6 text-right">Actions</TableHead>
+                  {userRole.toLowerCase() === "admin" && (
+                    <TableHead className="pr-6 text-right">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -155,39 +165,41 @@ export function EmployeesPage() {
                       <TableCell>
                         <EmployeeStatusBadge status={e.status} />
                       </TableCell>
-                      <TableCell className="pr-6 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="Row actions">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setprofile(true);
-                                setproDetails(e);
-                              }}
-                            >
-                              View Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedEmployee(e);
-                                seteditopen(true);
-                              }}
-                            >
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => deleteemploye(e.id)}
-                            >
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      {userRole.toLowerCase() === "admin" && (
+                        <TableCell className="pr-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label="Row actions">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setprofile(true);
+                                  setproDetails(e);
+                                }}
+                              >
+                                View Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedEmployee(e);
+                                  seteditopen(true);
+                                }}
+                              >
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => deleteemploye(e.id)}
+                              >
+                                Remove
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
