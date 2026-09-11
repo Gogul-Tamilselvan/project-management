@@ -241,29 +241,60 @@ export default function KanbanBoard() {
     setEmployees(data || []);
   };
 
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
+ const fetchTasks = async () => {
+  try {
+    setLoading(true);
 
-      const { data, error } = await connectSupabase
-        .from("task")
-        .select("*,employee(id,name,avatarUrl)")
-        .eq("projectId", projectId);
+    // Get logged-in user
+    const {
+      data: { user },
+    } = await connectSupabase.auth.getUser();
 
-      // console.log("uni: ", Array.from(empdata.values()));
-
-      if (error) {
-        // console.error("Error fetching tasks:", error);
-        return;
-      }
-
-      setTasks(data || []);
-    } catch (error) {
-      // console.error("Unexpected error:", error);
-    } finally {
-      setLoading(false);
+    if (!user) {
+      setTasks([]);
+      return;
     }
-  };
+
+    // Find logged-in employee
+    const { data: employeeData, error: employeeError } = await connectSupabase
+      .from("employee")
+      .select("id, email, role")
+      .eq("email", user.email)
+      .single();
+
+    if (employeeError || !employeeData) {
+      console.error("Employee not found:", employeeError);
+      setTasks([]);
+      return;
+    }
+
+    let query = connectSupabase
+      .from("task")
+      .select("*,employee(id,name,avatarUrl)")
+      .eq("projectId", projectId);
+
+    // Employee -> only assigned tasks
+    // TL -> all project tasks
+    if (employeeData.role?.toLowerCase() !== "tl") {
+      query = query.eq("assigneeId", employeeData.id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching tasks:", error);
+      setTasks([]);
+      return;
+    }
+
+    setTasks(data || []);
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    setTasks([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchCollaborators = async () => {
     try {
