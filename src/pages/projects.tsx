@@ -127,35 +127,91 @@ export function ProjectsPage() {
   };
 
   const getProjects = async () => {
-    setloading(true);
-    const { data: projectdt, error } = await connectSupabase
-      .from("projects")
-      .select("*")
-      .order("created_at", { ascending: false });
+  setloading(true);
 
-    if (error) {
-      // console.log(error);
-      setloading(false);
+  try {
+ 
+    const {
+      data: { user },
+      error: authError,
+    } = await connectSupabase.auth.getUser();
 
+    if (authError || !user?.email) {
+      console.error("Auth error:", authError);
+      setProjects([]);
       return;
     }
 
+    const { data: employee, error: employeeError } = await connectSupabase
+      .from("employee")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+
+    if (employeeError || !employee) {
+      console.error("Employee not found:", employeeError);
+      setProjects([]);
+      return;
+    }
+
+    const { data: tasks, error: taskError } = await connectSupabase
+      .from("task")
+      .select("projectId")
+      .eq("assigneeId", employee.id);
+
+    if (taskError) {
+      console.error("Task error:", taskError);
+      setProjects([]);
+      return;
+    }
+
+    const projectIds = [
+      ...new Set(
+        (tasks || [])
+          .map((task) => task.projectId)
+          .filter(Boolean)
+      ),
+    ];
+
+    if (projectIds.length === 0) {
+      setProjects([]);
+      return;
+    }
+
+    const { data: projectdt, error: projectError } = await connectSupabase
+      .from("projects")
+      .select("*")
+      .in("id", projectIds)
+      .order("created_at", { ascending: false });
+
+    if (projectError) {
+      console.error("Project error:", projectError);
+      setProjects([]);
+      return;
+    }
+
+    // 6. Format projects
     const formattedProjects: Project[] = await Promise.all(
-      projectdt.map(async (item) => ({
+      (projectdt || []).map(async (item) => ({
         id: item.id,
         name: item.project_name,
         description: item.description,
         status: item.status,
-        progress: (await totalPercent(item.id)) ?? 90,
+        progress: (await totalPercent(item.id)) ?? 0,
         startDate: item.start_date,
         dueDate: item.end_date,
         teamIds: [],
-      })),
+      }))
     );
 
     setProjects(formattedProjects);
+  } catch (error) {
+    console.error("getProjects error:", error);
+    setProjects([]);
+  } finally {
     setloading(false);
-  };
+  }
+};
 
   const visible = projects.filter(
     (p) =>
