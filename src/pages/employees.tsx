@@ -483,14 +483,26 @@ function EditEmployeeModal({
           <Label htmlFor="e-role">
             Designation <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="e-role"
-            placeholder="e.g. Senior Product Designer"
-            className="mt-1.5"
+          <Select
             value={updatedata.role}
-            required
-            onChange={(e) => setupdatedata((prev) => ({ ...prev, role: e.target.value }))}
-          />
+            onValueChange={(value) =>
+              setupdatedata((prev) => ({
+                ...prev,
+                role: value,
+              }))
+            }
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Select designation" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="project_manager">Project Manager</SelectItem>
+              <SelectItem value="tl">Team Leader</SelectItem>
+              <SelectItem value="member">Member</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label>
@@ -729,22 +741,26 @@ function AddEmployeeModal({
           <Label htmlFor="e-role">
             Designation <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="e-role"
-            placeholder="e.g. Senior Product Designer"
-            className="mt-1.5"
-            required
+          <Select
             value={formData.role}
-            onChange={(e) => {
+            onValueChange={(value) =>
               setFormData((prev) => ({
                 ...prev,
-                role: e.target.value,
-              }));
-              e.currentTarget.setCustomValidity(
-                e.target.value.trim() ? "" : "This field is required",
-              );
-            }}
-          />
+                role: value,
+              }))
+            }
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Select designation" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="project_manager">Project Manager</SelectItem>
+              <SelectItem value="tl">Team Leader</SelectItem>
+              <SelectItem value="member">Member</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label>
