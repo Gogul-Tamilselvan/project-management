@@ -78,6 +78,7 @@ export function EmployeesPage() {
   };
   const getRole = async () => {
     const res = await getCurrentUserRoleService();
+    setuserRole(res?.role);
   };
 
   useEffect(() => {
