@@ -74,13 +74,20 @@ interface Employee {
 }
 
 interface SubtaskType {
+  subtask_title: string;
+  description: string;
+  priority: string;
+  assigneeName: string;
+  dueDate: string;
+  task_id: string;
+  id: string|number;
+}
+interface SubtaskFormType {
   title: string;
   description: string;
   priority: string;
   assigneeName: string;
   dueDate: string;
-  subtask_id: string;
-  id: number;
 }
 
 const columns: {
@@ -134,19 +141,18 @@ export default function KanbanBoard() {
   const [selectedsubTask, setSelectedsubTask] = useState<string | null>(null);
   const [subtaskShow, setsubtaskShow] = useState<boolean>(false);
 
-  const [subtaskForm, setSubtaskForm] = useState<SubtaskType>({
+  const [subtaskForm, setSubtaskForm] = useState<SubtaskFormType>({
     title: "",
     description: "",
     priority: "medium",
     assigneeName: "",
     dueDate: "",
-    subtask_id: "",
-    id: 0,
+   
   });
 
   const [subtasks, setsubtask] = useState<SubtaskType[]>([]);
   const [selectedEmp, setselectedEmp] = useState<string>("");
-
+  const [subtaskAssigneeId, setSubtaskAssigneeId] = useState<string>("");
   const [taskDescription, setTaskDescription] = useState("");
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("00");
@@ -161,26 +167,28 @@ export default function KanbanBoard() {
   }>();
   const [rejectionModalTask, setRejectionModalTask] = useState<KanbanTask | null>(null);
 
-  const fetchsubtasks = async (id: string) => {
-    const { data, error } = await connectSupabase
-      .from("subtask")
-      .select("*")
-      .eq("id", id)
-      .order("id", { ascending: false });
+const fetchsubtasks = async (taskId: string) => {
+  const { data, error } = await connectSupabase
+    .from("subtask")
+    .select("*")
+    .eq("task_id", taskId)
+    .order("id", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching subtasks:", error);
-      return;
-    }
+  if (error) {
+    console.error("Error fetching subtasks:", error);
+    setsubtask([]);
+    return;
+  }
+ console.log("Subtasks from Supabase:", data);
 
-    setsubtask(data || []);
-  };
-  console.log("heloo: s", subtasks);
+  setsubtask(data || []);
+};
+
 
   useEffect(() => {
     if (projectId) {
       fetchTasks();
-      // fetchsubtasks();
+      
       fetchEmployees();
       fetchTimesheets();
       fetchCollaborators();
@@ -216,14 +224,12 @@ export default function KanbanBoard() {
       );
 
       if (!employee) {
-        // console.log("No employee record found for this user");
         setIsTL(false);
         return;
       }
 
       setIsTL(employee.role?.toLowerCase() === "tl");
     } catch (error) {
-      // console.error("Unexpected role error:", error);
       setIsTL(false);
     }
   };
@@ -237,7 +243,7 @@ export default function KanbanBoard() {
       console.error("Error fetching employees:", error);
       return;
     }
-
+ 
     setEmployees(data || []);
   };
 
@@ -273,8 +279,6 @@ export default function KanbanBoard() {
       .select("*,employee(id,name,avatarUrl)")
       .eq("projectId", projectId);
 
-    // Employee -> only assigned tasks
-    // TL -> all project tasks
     if (employeeData.role?.toLowerCase() !== "tl") {
       query = query.eq("assigneeId", employeeData.id);
     }
@@ -890,48 +894,57 @@ export default function KanbanBoard() {
     );
   }
 
-  const addsubtask = async () => {
-    if (!selectedsubTask) {
-      toast.error("Main task not selected");
-      return;
-    }
+ const addsubtask = async () => {
+  if (!selectedsubTask) {
+    toast.error("Main task not selected");
+    return;
+  }
+   if (!subtaskForm.title.trim()) {
+    toast.error("Please enter subtask title");
+    return;
+  }
 
-    const { data, error } = await connectSupabase.from("subtask").insert([
+  if (!subtaskAssigneeId) {
+    toast.error("Please select an assignee");
+    return;
+  }
+
+  const { data, error } = await connectSupabase
+    .from("subtask")
+    .insert([
       {
-        title: subtaskForm.title.trim(),
+        task_id: selectedsubTask,
+        subtask_title: subtaskForm.title.trim(),
         description: subtaskForm.description.trim(),
         priority: subtaskForm.priority,
-        assigneeName: subtaskForm.assigneeName,
+        assigneename: subtaskAssigneeId,
         dueDate: subtaskForm.dueDate || null,
-        subtask_id: selectedsubTask,
       },
-    ]);
+    ])
+    .select("*");
+console.log("INSERTED DATA:", data);
+console.log("INSERT ERROR:", error);
+  if (error) {
+    toast.error(error.message);
+    return;
+  }
 
-    console.log("Subtask data:", data);
-    console.log("Subtask error:", error);
+  toast.success("Subtask created successfully");
 
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+  await fetchsubtasks(selectedsubTask);
+  setSubtaskForm({
+    title: "",
+    description: "",
+    priority: "medium",
+    assigneeName: "",
+    dueDate: "",
+    
+  });
 
-    toast.success("Subtask created successfully");
-
-    // await fetchsubtasks();
-
-    setSubtaskForm({
-      title: "",
-      description: "",
-      priority: "medium",
-      assigneeName: "",
-      dueDate: "",
-      subtask_id: "",
-      id: 0,
-    });
-
-    setIsSubtaskModalOpen(false);
-    setSelectedsubTask(null);
-  };
+  setSubtaskAssigneeId("");
+  setIsSubtaskModalOpen(false);
+  setSelectedsubTask(null);
+};
 
   return (
     <div className="min-h-screen">
@@ -1287,7 +1300,11 @@ export default function KanbanBoard() {
 
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => setIsSubtaskModalOpen(true)}
+                              
+                                onClick={() => {
+                           setSelectedsubTask(task.id);
+                          setIsSubtaskModalOpen(true);
+  }}
                                 className="cursor-pointer"
                               >
                                 <span>
@@ -1321,14 +1338,14 @@ export default function KanbanBoard() {
                     <div className="mt-3 space-y-2">
                       {subtasks
                         .filter(
-                          (subtask) => String(subtask.subtask_id).trim() === String(task.id).trim(),
+                          (subtask) => String(subtask.task_id).trim() === String(task.id).trim(),
                         )
                         .map((subtask) => (
                           <div
                             key={subtask.id}
                             className="rounded-md border border-border bg-muted/30 p-3"
                           >
-                            <p className="text-sm font-semibold text-foreground">{subtask.title}</p>
+                            <p className="text-sm font-semibold text-foreground">{subtask.subtask_title}</p>
 
                             {subtask.description && (
                               <p className="mt-1 text-xs text-muted-foreground">
@@ -1383,6 +1400,7 @@ export default function KanbanBoard() {
                         <label className="mb-1.5 block text-sm font-medium">Subtask Title</label>
 
                         <Input
+                         type="text"
                           placeholder="Enter subtask title"
                           value={subtaskForm.title}
                           onChange={(e) =>
@@ -1434,24 +1452,19 @@ export default function KanbanBoard() {
                       <div>
                         <label className="mb-1.5 block text-sm font-medium">Assignee</label>
 
-                        <select
-                          value={subtaskForm.assigneeName}
-                          onChange={(e) =>
-                            setSubtaskForm({
-                              ...subtaskForm,
-                              assigneeName: e.target.value,
-                            })
-                          }
-                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                        >
-                          <option value="">Select assignee</option>
+                      <select
+  value={subtaskAssigneeId}
+  onChange={(e) => setSubtaskAssigneeId(e.target.value)}
+  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+>
+  <option value="">Select assignee</option>
 
-                          {employees.map((employee) => (
-                            <option key={employee.id} value={employee.name}>
-                              {employee.name}
-                            </option>
-                          ))}
-                        </select>
+  {employees.map((employee) => (
+    <option key={employee.id} value={employee.id}>
+      {employee.name}
+    </option>
+  ))}
+</select>
                       </div>
 
                       {/* Due Date */}
@@ -1480,15 +1493,9 @@ export default function KanbanBoard() {
                           Cancel
                         </Button>
 
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            addsubtask();
-                            setSelectedsubTask(null);
-                          }}
-                        >
-                          Add Subtask
-                        </Button>
+                        <Button type="button" onClick={addsubtask}>
+                       Add Subtask
+                      </Button>
                       </div>
                     </div>
                     {/* </div> */}
@@ -1953,19 +1960,52 @@ export default function KanbanBoard() {
       )}
 
       {/* subtask show task */}
-      <Modal open={subtaskShow} onOpenChange={(open) => setsubtaskShow(open)} title="Subtask">
-        {subtasks.length > 0 ? (
-          subtasks.map((v) => (
-            <div className="rounded-lg border bg-background border-border p-2">
-              <h3 className="text-base font-semibold text-foreground">{v.title}</h3>
+    <Modal
+  open={subtaskShow}
+  onOpenChange={(open) => {
+    setsubtaskShow(open);
 
-              <p className="mt-1 text-sm leading-5 text-muted-foreground">{v.description}</p>
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-400 text-lg font-medium py-10">No data available</p>
-        )}
-      </Modal>
+    if (!open) {
+      setSelectedsubTask(null);
+      setsubtask([]);
+    }
+  }}
+  title="Subtasks"
+>
+  {subtasks.length > 0 ? (
+    <div className="space-y-3">
+      {subtasks.map((subtask) => (
+        <div
+          key={subtask.id}
+          className="rounded-lg border border-border p-4"
+        >
+          <h3 className="font-semibold">
+            Title:{subtask.subtask_title}
+          </h3>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+           Description: {subtask.description || "No description"}
+          </p>
+
+          <div className="mt-3 flex gap-4 text-sm">
+            <span>
+              Priority: <b>{subtask.priority}</b>
+            </span>
+
+            <span>
+              Due Date:{" "}
+              <b>{subtask.dueDate || "No due date"}</b>
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-sm text-muted-foreground">
+      No subtasks available for this task.
+    </p>
+  )}
+</Modal>
 
       <Modal
         open={isCollaboratorOpen}

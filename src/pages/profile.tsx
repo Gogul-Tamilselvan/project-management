@@ -469,7 +469,7 @@ export function ProfilePage() {
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="engineering">Engineering</SelectItem>
+                 <SelectItem value="engineering">Engineering</SelectItem>
                 <SelectItem value="design">Design</SelectItem>
                 <SelectItem value="product">Product</SelectItem>
                 <SelectItem value="marketing">Marketing</SelectItem>
@@ -478,23 +478,29 @@ export function ProfilePage() {
             </Select>
           </div>
           <div>
-            <Label htmlFor="pr-role">
-              Role <span className="text-red-500">*</span>
+            <Label htmlFor="pr-dept">
+              Role<span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="pr-role"
+            <Select
               value={formData.role}
               required
-              onChange={(e) => {
+              onValueChange={(value) => {
                 setIsEdited(true);
-                setFormData({
-                  ...formData,
-                  role: e.target.value,
-                });
-                e.target.setCustomValidity(e.target.value.trim() ? "" : "This field is required");
+                setFormData((prev) => ({ ...prev, role: value }));
               }}
-              className="mt-1.5"
-            />
+            >
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Admin">Admin</SelectItem>
+                <SelectItem value="Project Manager">Project Manager</SelectItem>
+                <SelectItem value="TL">Team Leader</SelectItem>
+                <SelectItem value="Member">Member</SelectItem>
+               
+              </SelectContent>
+            </Select>
+            
           </div>
         </form>
       </Modal>
